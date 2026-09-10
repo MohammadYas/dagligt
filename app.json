@@ -9,7 +9,12 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "dk.mo.madhakka",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.dk.mo.madhakka"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +29,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      "@bacons/apple-targets"
     ]
   }
 }

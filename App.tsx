@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { DB, load, save, empty } from './src/store';
 import { light, dark } from './src/theme';
+import { opdaterWidget } from './src/widget';
 import Dag from './src/screens/Dag';
 import Log from './src/screens/Log';
 import Fang from './src/screens/Fang';
@@ -32,6 +33,7 @@ export default function App() {
     load().then((d) => {
       setDb(d);
       setKlar(true);
+      opdaterWidget(d);
     });
   }, []);
 
@@ -39,6 +41,7 @@ export default function App() {
     setDb((prev) => {
       const next = fn(prev);
       save(next);
+      opdaterWidget(next);
       return next;
     });
   }
