@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, Platform, Linking,
 } from 'react-native';
@@ -9,14 +9,38 @@ import * as Haptics from 'expo-haptics';
 import { PROJEKTER, Projekt } from '../projekter';
 import { Theme } from '../theme';
 import { Type } from '../type';
+import Puls from '../components/Puls';
 
 // Paa web bliver WebView til en iframe, og begge sites saetter
 // X-Frame-Options: DENY. Der er kun én vej ind: en rigtig fane.
 const KAN_INDLEJRE = Platform.OS !== 'web';
 
+type Liv = 'ukendt' | 'oppe' | 'nede';
+
 export default function Projekter({ t }: { t: Theme }) {
   const [aaben, setAaben] = useState<Projekt | null>(null);
   const [fejlede, setFejlede] = useState(false);
+  const [liv, setLiv] = useState<Record<string, Liv>>({});
+  const [slag, setSlag] = useState(0);
+
+  useEffect(() => {
+    let afbrudt = false;
+    (async () => {
+      for (const p of PROJEKTER) {
+        try {
+          // Ingen noegle, ingen data. Vi spoerger kun om sitet svarer.
+          await fetch('https://' + p.domaene, { method: 'GET', mode: 'no-cors' as RequestMode });
+          if (!afbrudt) setLiv((l) => ({ ...l, [p.id]: 'oppe' }));
+        } catch {
+          if (!afbrudt) setLiv((l) => ({ ...l, [p.id]: 'nede' }));
+        }
+      }
+      if (!afbrudt) setSlag((n) => n + 1);
+    })();
+    return () => {
+      afbrudt = true;
+    };
+  }, []);
 
   function aabnUdenfor(p: Projekt) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -100,9 +124,15 @@ export default function Projekter({ t }: { t: Theme }) {
             accessibilityRole="link"
             accessibilityLabel={p.navn + ', ' + p.beskrivelse}
           >
+            <Puls
+              farve={liv[p.id] === 'nede' ? '#E24B4A' : liv[p.id] === 'oppe' ? t.done : t.faint}
+              slag={slag}
+              daempet={false}
+            />
             <View style={{ flex: 1 }}>
               <Text style={[s.navn, { color: t.text }]}>{p.navn}</Text>
-              <Text style={[s.under, { color: t.faint }]}>{p.beskrivelse}</Text>
+              <Text style={[s.under, { color: t.dim }]}>{p.beskrivelse}</Text>
+              <Text style={[s.domaene, { color: t.faint }]}>{p.domaene}</Text>
             </View>
             <Ionicons
               name={KAN_INDLEJRE ? 'chevron-forward' : 'open-outline'}
@@ -126,9 +156,10 @@ const s = StyleSheet.create({
   pad: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 44 },
   h1: { ...Type.largeTitle, marginBottom: 14 },
 
-  raekke: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 17, borderTopWidth: 1 },
-  navn: { ...Type.callout, fontWeight: '600' },
-  under: { ...Type.caption1, marginTop: 2 },
+  raekke: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 18, borderTopWidth: 1 },
+  navn: { ...Type.title3 },
+  under: { ...Type.footnote, marginTop: 2 },
+  domaene: { ...Type.caption2, marginTop: 3 },
   fod: { ...Type.caption1, marginTop: 20 },
 
   bar: {

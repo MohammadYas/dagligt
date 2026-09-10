@@ -31,10 +31,21 @@ jobs:
       - name: Byg
         run: ./build-ipa.sh
 
+      - name: Byg development client
+        run: ./build-devclient.sh
+
       - uses: actions/upload-artifact@v4
         if: success()
         with:
           name: mo-madhakka-ipa-xcode-${{ matrix.xcode }}
           path: build/app.ipa
+          retention-days: 30
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: mo-madhakka-devclient
+          path: build/dev.ipa
           retention-days: 30
           if-no-files-found: error
