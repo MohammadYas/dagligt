@@ -85,7 +85,25 @@ afsnit('Statusfiler fra scripterne');
 
   const gammel = parseStatus(tankestreg.replace(/Sidste tjek: .*/, 'Sidste tjek: 2020-01-01 00:00:00'));
   ok('gammel status bliver tavs', tilstand(gammel) === 'advarsel');
-  ok('graensen er tre minutter', TAVS_EFTER_MS === 180000);
+
+  // Cas melder omkring hvert halve time og skal ikke kaldes tavs af det
+  const halvTime = new Date(Date.now() - 28 * 60000);
+  const p = (n: number) => String(n).padStart(2, '0');
+  const nylig = parseStatus(tankestreg.replace(
+    /Sidste tjek: .*/,
+    'Sidste tjek: ' + halvTime.getFullYear() + '-' + p(halvTime.getMonth() + 1) + '-' + p(halvTime.getDate()) +
+    ' ' + p(halvTime.getHours()) + ':' + p(halvTime.getMinutes()) + ':00',
+  ));
+  ok('28 minutter er stadig ok', tilstand(nylig) === 'ok');
+
+  const treTimer = new Date(Date.now() - 192 * 60000);
+  const doed = parseStatus(tankestreg.replace(
+    /Sidste tjek: .*/,
+    'Sidste tjek: ' + treTimer.getFullYear() + '-' + p(treTimer.getMonth() + 1) + '-' + p(treTimer.getDate()) +
+    ' ' + p(treTimer.getHours()) + ':' + p(treTimer.getMinutes()) + ':00',
+  ));
+  ok('tre timer melder ikke', tilstand(doed) === 'advarsel');
+  ok('graensen er halvanden time', TAVS_EFTER_MS === 5400000);
 
   const stoppet = parseStatus(tankestreg.replace('Kører: JA', 'Kører: STOPPET'));
   ok('stoppet script er fejl', tilstand(stoppet) === 'fejl');

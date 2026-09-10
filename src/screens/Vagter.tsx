@@ -315,7 +315,7 @@ function Statuslinje({
   if (!status) return null;
   const tl = tilstand(status);
   const farve = tl === 'ok' ? t.done : tl === 'advarsel' ? t.advarsel : t.fejl;
-  const ord = tl === 'ok' ? 'kører' : tl === 'advarsel' ? 'tavs' : 'stoppet';
+  const ord = tl === 'ok' ? 'kører' : tl === 'advarsel' ? 'melder ikke' : 'stoppet';
 
   return (
     <View style={s.status}>
@@ -343,7 +343,11 @@ function Statuslinje({
       </View>
 
       {status.dine && status.dine.toLowerCase() !== 'ingen' ? (
-        <Text style={[s.dine, { color: t.accent }]}>Dine vagter: {status.dine}</Text>
+        <Text
+          style={[s.dine, { color: /fejl|ukendt/i.test(status.dine) ? t.advarsel : t.accent }]}
+        >
+          Dine vagter: {status.dine}
+        </Text>
       ) : null}
 
       {status.mode ? <Text style={[s.mode, { color: t.faint }]}>{status.mode}</Text> : null}

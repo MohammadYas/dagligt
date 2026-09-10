@@ -135,10 +135,16 @@ export type Status = {
 };
 
 /**
- * Scripterne skriver status hvert minut. Tre manglende indmeldinger
- * er nok til at kalde det tavst — én forsinket runde er normalt.
+ * Hvornaar en melding er for gammel til at tro paa.
+ *
+ * Filen siger "Kører: JA" lige til den sidste linje der blev skrevet, saa
+ * et script der falder ud efterlader en fil der stadig lyder rask. Alderen
+ * er det eneste der afsloerer det.
+ *
+ * Cas melder omkring hvert halve time naar den koerer normalt, saa graensen
+ * ligger paa halvanden time: tre sprungne runder, ikke én forsinket.
  */
-export const TAVS_EFTER_MS = 3 * 60_000;
+export const TAVS_EFTER_MS = 90 * 60_000;
 
 export function parseStatus(raa: string): Status {
   const find = (m: RegExp) => raa.match(m);
