@@ -2,7 +2,7 @@ import { DB, dayKey, longDate, greeting, streak } from './store';
 import { hentFil } from './dropbox';
 import { FILER, parseOensker, parseStatus, tilstand, Script } from './vagter';
 
-import { hentKonfig } from './konfig';
+import { spoerg } from './ai';
 
 export type Kilder = {
   dato: string;
@@ -73,9 +73,6 @@ const SYSTEM = [
 
 /** Beder DeepSeek skrive dagens besked ud fra kilderne. */
 export async function skrivBrief(k: Kilder): Promise<string> {
-  const NOEGLE = (await hentKonfig()).deepseek;
-  if (!NOEGLE) throw new Error('DeepSeek er ikke sat op. Indtast nøglen under Projekter.');
-
   const data = {
     hilsen: k.hilsen,
     dato: k.dato,
@@ -88,28 +85,12 @@ export async function skrivBrief(k: Kilder): Promise<string> {
     noter_i_indbakken: k.indbakke,
   };
 
-  const svar = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${NOEGLE}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      temperature: 0.4,
-      max_tokens: 220,
-      messages: [
-        { role: 'system', content: SYSTEM },
-        { role: 'user', content: JSON.stringify(data) },
-      ],
-    }),
+  return spoerg({
+    beskeder: [
+      { role: 'system', content: SYSTEM },
+      { role: 'user', content: JSON.stringify(data) },
+    ],
+    temperatur: 0.4,
+    maksTokens: 220,
   });
-
-  if (!svar.ok) {
-    if (svar.status === 401) throw new Error('DeepSeek afviste nøglen.');
-    if (svar.status === 402) throw new Error('DeepSeek-kontoen har ingen kredit tilbage.');
-    throw new Error(`DeepSeek svarede ${svar.status}.`);
-  }
-
-  const j = await svar.json();
-  const tekst: string = j?.choices?.[0]?.message?.content?.trim() ?? '';
-  if (!tekst) throw new Error('DeepSeek returnerede et tomt svar.');
-  return tekst;
 }

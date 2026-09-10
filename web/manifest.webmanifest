@@ -1,0 +1,16 @@
+{
+  "name": "Auto Vagt",
+  "short_name": "Auto Vagt",
+  "description": "Vagter, rute og dagens brief",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#131211",
+  "theme_color": "#131211",
+  "icons": [
+    { "src": "/ikoner/ikon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/ikoner/ikon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/ikoner/ikon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

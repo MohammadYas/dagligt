@@ -1,6 +1,7 @@
 // Raa HTTP mod Dropbox. Ingen SDK.
 
 import { hentKonfig, harDropbox } from './konfig';
+import { erWeb, harAdgang, adgangsHeader } from './adgang';
 
 export class DropboxFejl extends Error {
   constructor(public besked: string, public status: number) {
@@ -71,6 +72,15 @@ function oversaetFejl(status: number, krop: string): DropboxFejl {
 }
 
 export async function hentFil(sti: string): Promise<string> {
+  if (erWeb) {
+    if (!harAdgang()) throw new DropboxFejl('Appen er ikke låst op.', 401);
+    const r = await fetch('/api/dropbox?sti=' + encodeURIComponent(sti), {
+      headers: adgangsHeader(),
+    });
+    if (!r.ok) throw oversaetFejl(r.status, await r.text());
+    return await r.text();
+  }
+
   const t = await adgangstoken();
   const svar = await fetch('https://content.dropboxapi.com/2/files/download', {
     method: 'POST',
@@ -84,6 +94,17 @@ export async function hentFil(sti: string): Promise<string> {
 }
 
 export async function gemFil(sti: string, indhold: string): Promise<void> {
+  if (erWeb) {
+    if (!harAdgang()) throw new DropboxFejl('Appen er ikke låst op.', 401);
+    const r = await fetch('/api/dropbox?sti=' + encodeURIComponent(sti), {
+      method: 'POST',
+      headers: { ...adgangsHeader(), 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: indhold,
+    });
+    if (!r.ok) throw oversaetFejl(r.status, await r.text());
+    return;
+  }
+
   const t = await adgangstoken();
   const svar = await fetch('https://content.dropboxapi.com/2/files/upload', {
     method: 'POST',
@@ -98,5 +119,6 @@ export async function gemFil(sti: string, indhold: string): Promise<void> {
 }
 
 export async function erOpsat(): Promise<boolean> {
+  if (erWeb) return harAdgang();
   return harDropbox(await hentKonfig());
 }

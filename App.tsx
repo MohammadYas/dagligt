@@ -5,6 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { DB, load, save, empty } from './src/store';
 import { light, dark } from './src/theme';
+import { erWeb, harAdgang } from './src/adgang';
+import Laas from './src/components/Laas';
 import { opdaterWidget } from './src/widget';
 import Dag from './src/screens/Dag';
 import Fang from './src/screens/Fang';
@@ -30,6 +32,7 @@ export default function App() {
   const [tab, setTab] = useState<TabKey>('dag');
   const [db, setDb] = useState<DB>(empty);
   const [klar, setKlar] = useState(false);
+  const [laast, setLaast] = useState(erWeb && !harAdgang());
 
   useEffect(() => {
     load().then((d) => {
@@ -52,6 +55,9 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <SafeAreaView style={[s.root, { backgroundColor: t.bg }]} edges={['top', 'bottom']}>
+        {laast ? (
+          <Laas t={t} aabnet={() => setLaast(false)} />
+        ) : (
         <KeyboardAvoidingView
           style={s.root}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -85,6 +91,7 @@ export default function App() {
             })}
           </View>
         </KeyboardAvoidingView>
+        )}
       </SafeAreaView>
     </SafeAreaProvider>
   );

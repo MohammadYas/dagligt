@@ -1,0 +1,25 @@
+[build]
+  publish = "dist"
+  command = "npx expo export --platform web --output-dir dist && node scripts/pwa.mjs"
+
+[functions]
+  directory = "netlify/functions"
+
+# Enkeltsides-app: alt der ikke er en fil, serveres af index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"

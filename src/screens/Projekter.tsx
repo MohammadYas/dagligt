@@ -12,6 +12,7 @@ import { Type } from '../type';
 import Puls from '../components/Puls';
 import Koder from '../components/Koder';
 import Opsaetning from '../components/Opsaetning';
+import Hjemmeskaerm from '../components/Hjemmeskaerm';
 
 // Paa web bliver WebView til en iframe, og begge sites saetter
 // X-Frame-Options: DENY. Der er kun én vej ind: en rigtig fane.
@@ -154,6 +155,8 @@ export default function Projekter({ t }: { t: Theme }) {
       <Koder t={t} daempet={false} />
 
       <Opsaetning t={t} daempet={false} />
+
+      <Hjemmeskaerm t={t} />
     </ScrollView>
   );
 }

@@ -12,3 +12,13 @@ android/
 
 .env
 .env.local
+
+# Local Netlify folder
+.netlify
+
+# Bygge- og arbejdsmapper
+dist/
+.bundle-ud/
+.klargoer/
+.hent/
+.adgangskode.tmp
