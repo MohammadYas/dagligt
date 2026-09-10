@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Dagligt",
-    "slug": "dagligt",
+    "name": "Mo madhakka app",
+    "slug": "mo-madhakka-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "dk.mo.dagligt",
+      "bundleIdentifier": "dk.mo.madhakka",
       "buildNumber": "1"
     },
     "android": {

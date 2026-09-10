@@ -8,6 +8,7 @@ import { light, dark } from './src/theme';
 import Dag from './src/screens/Dag';
 import Log from './src/screens/Log';
 import Fang from './src/screens/Fang';
+import Projekter from './src/screens/Projekter';
 
 const NAVN = 'mo';
 
@@ -15,6 +16,7 @@ const TABS = [
   { key: 'dag', label: 'Dag', icon: 'sunny-outline', on: 'sunny' },
   { key: 'log', label: 'Log', icon: 'stats-chart-outline', on: 'stats-chart' },
   { key: 'fang', label: 'Fang', icon: 'file-tray-outline', on: 'file-tray' },
+  { key: 'projekter', label: 'Projekter', icon: 'grid-outline', on: 'grid' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -58,8 +60,10 @@ export default function App() {
             <Dag db={db} update={update} t={t} navn={NAVN} />
           ) : tab === 'log' ? (
             <Log db={db} update={update} t={t} />
-          ) : (
+          ) : tab === 'fang' ? (
             <Fang db={db} update={update} t={t} />
+          ) : (
+            <Projekter t={t} />
           )}
 
           <View style={[s.tabbar, { borderTopColor: t.line, backgroundColor: t.card }]}>
