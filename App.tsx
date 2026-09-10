@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { DB, load, save, empty } from './src/store';
 import { light, dark } from './src/theme';
-import { erWeb, harAdgang, erStandalone } from './src/adgang';
+import { erWeb, harAdgang, sikkerBund } from './src/adgang';
 import Laas from './src/components/Laas';
 import { opdaterWidget } from './src/widget';
 import Dag from './src/screens/Dag';
@@ -35,9 +35,8 @@ export default function App() {
   const [laast, setLaast] = useState(erWeb && !harAdgang());
 
   // Safari giver ingen sikker zone paa web, saa bundlinjen loeftes selv.
-  // env(safe-area-inset-bottom) i index.html holder allerede plads til
-  // hjemme-indikatoren; et ekstra loeft her ville laegge sig oveni.
-  const bundLoeft = erStandalone() ? 0 : erWeb ? 8 : 0;
+  // Linjen naar helt ned; kun dens indhold loeftes fri af indikatoren.
+  const bundLoeft = sikkerBund();
 
   useEffect(() => {
     load().then((d) => {

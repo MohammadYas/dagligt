@@ -23,6 +23,31 @@ export function erStandalone(): boolean {
   }
 }
 
+/**
+ * Hoejden af den sikre zone i bunden, i pixels.
+ *
+ * react-native-web faar ikke Safaris env(safe-area-inset-bottom), saa den
+ * maales med et usynligt felt der har den som hoejde. Bundlinjens flade
+ * skal naa helt ned til kanten; det er kun teksten der skal loeftes fri
+ * af hjemme-indikatoren.
+ */
+export function sikkerBund(): number {
+  if (!erWeb) return 0;
+  try {
+    const d = (globalThis as any).document;
+    const felt = d.createElement('div');
+    felt.style.cssText =
+      'position:fixed;bottom:0;left:0;width:0;visibility:hidden;' +
+      'height:env(safe-area-inset-bottom, 0px)';
+    d.body.appendChild(felt);
+    const h = felt.offsetHeight;
+    d.body.removeChild(felt);
+    return h;
+  } catch {
+    return 0;
+  }
+}
+
 let kode: string | null = null;
 
 if (erWeb) {
