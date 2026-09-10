@@ -107,8 +107,8 @@ export default function App() {
 const s = StyleSheet.create({
   root: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // Linjen slutter ved skaermkanten; kun en hairline luft under teksten.
-  tabbar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 9, paddingBottom: 4 },
+  // Teksten slutter ved skaermkanten. Ingen luft under.
+  tabbar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 10, paddingBottom: 0 },
   tab: { flex: 1, alignItems: 'center', gap: 3 },
   tabLabel: { fontSize: 10, fontWeight: '500' },
 });
