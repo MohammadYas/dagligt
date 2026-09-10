@@ -164,7 +164,7 @@ export default function Vagter({ t }: { t: Theme }) {
           <RefreshControl refreshing={false} onRefresh={() => hent(true)} tintColor={t.accent} />
         }
       >
-        <Text style={[s.h1, { color: t.text }]}>VagtStatus</Text>
+        <Text style={[s.h1, { color: t.text }]}>Auto Vagt</Text>
 
         <Vaelger muligheder={MULIGHEDER} valgt={valg} vaelg={setValg} t={t} daempet={daempet} />
 

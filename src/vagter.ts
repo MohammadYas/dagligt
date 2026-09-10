@@ -103,7 +103,7 @@ function erStednavn(tekst: string): boolean {
 export function serialiserOensker(o: Oensker): string {
   const l: string[] = [];
   l.push('# ============================================================');
-  l.push('#  Styret fra VagtStatus-appen. Scriptet genlaeser hvert 5. minut.');
+  l.push('#  Styret fra Auto Vagt. Scriptet genlaeser hvert 5. minut.');
   l.push('# ============================================================');
   l.push('');
   l.push('# ---- DAGE du vil arbejde (format: AAAA-MM-DD) ----');
