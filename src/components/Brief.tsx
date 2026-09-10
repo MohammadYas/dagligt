@@ -95,7 +95,7 @@ export default function Brief({ db, t, daempet }: Props) {
         )}
       </Pressable>
 
-      {fejl ? <Text style={[s.fejl, { color: '#E24B4A' }]}>{fejl}</Text> : null}
+      {fejl ? <Text style={[s.fejl, { color: t.fejl }]}>{fejl}</Text> : null}
 
       {tekst ? (
         <Animated.Text

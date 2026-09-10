@@ -10,32 +10,47 @@ export type Theme = {
   accentBg: string;
   accentText: string;
   done: string;
+  advarsel: string;
+  fejl: string;
 };
 
+/**
+ * Én kulør baerer al interaktion: petroleum. Den er valgt fordi den kan
+ * staa ved siden af de tre tilstandsfarver uden at forveksles med nogen —
+ * graesgroen betyder koerer, okker betyder tavs, teglroed betyder stoppet.
+ * Farve optraeder ikke andre steder end de fire.
+ *
+ * Baggrundene er varme neutraler frem for hvidt og sort; en skaerm der
+ * laeses kl. 5 om morgenen skal ikke lyse som papir.
+ */
 export const light: Theme = {
-  bg: '#F4F2ED',
+  bg: '#F3F1EC',
   card: '#FFFFFF',
-  cardAlt: '#F1EFE8',
-  text: '#1C1C1A',
-  dim: '#5F5E5A',
-  faint: '#7E7C74',
-  line: '#E2E0D8',
-  accent: '#534AB7',
-  accentBg: '#EEEDFE',
-  accentText: '#26215C',
-  done: '#639922',
+  cardAlt: '#E7E4DC',
+  text: '#191817',
+  dim: '#55534E',
+  faint: '#7E7A72',
+  line: '#D8D4C9',
+  accent: '#1A5E62',
+  accentBg: '#DCE8E7',
+  accentText: '#0E3A3D',
+  done: '#4A7A22',
+  advarsel: '#9A6410',
+  fejl: '#A33227',
 };
 
 export const dark: Theme = {
-  bg: '#141413',
-  card: '#1F1F1E',
-  cardAlt: '#282826',
-  text: '#F2F1EC',
-  dim: '#A5A39B',
-  faint: '#918F87',
-  line: '#33322F',
-  accent: '#AFA9EC',
-  accentBg: '#2B2748',
-  accentText: '#CECBF6',
-  done: '#97C459',
+  bg: '#131211',
+  card: '#1C1B19',
+  cardAlt: '#252320',
+  text: '#F0EEE8',
+  dim: '#A8A49B',
+  faint: '#8C887F',
+  line: '#312E2A',
+  accent: '#6FB8BC',
+  accentBg: '#17322F',
+  accentText: '#9FD3D5',
+  done: '#93B84E',
+  advarsel: '#D19A3C',
+  fejl: '#E0705F',
 };

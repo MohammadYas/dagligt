@@ -8,7 +8,9 @@ CONFIG="Debug"
 OUT="$PWD/build"
 
 echo "==> Installerer JS-afhaengigheder"
-npm ci
+# npm ci er hurtigst og mest praecis, men laasefilen falder ud af sync
+# hver gang en pakke installeres enkeltvis. Byg maa ikke falde paa det.
+npm ci || npm install --no-audit --no-fund
 
 echo "==> Genererer native iOS-projekt"
 npx expo prebuild --platform ios --clean

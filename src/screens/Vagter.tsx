@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator,
-  RefreshControl, Platform, Alert, AccessibilityInfo, Linking,
+  RefreshControl, Platform, AccessibilityInfo, Linking,
 } from 'react-native';
 import Animated, { FadeIn, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -40,6 +40,7 @@ export default function Vagter({ t }: { t: Theme }) {
   const [fejl, setFejl] = useState<string | null>(null);
   const [aendret, setAendret] = useState(false);
   const [visRaa, setVisRaa] = useState(false);
+  const [gemt, setGemt] = useState(false);
   const [slag, setSlag] = useState(0);
   const [daempet, setDaempet] = useState(false);
 
@@ -143,8 +144,10 @@ export default function Vagter({ t }: { t: Theme }) {
         await gemFil(FILER[sc].oensker, serialiserMedSkabelon(nuvaerende, oensker));
       }
       setAendret(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Gemt', 'Scripterne genlæser filen inden for 5 minutter.');
+      // Kvitteringen hoerer til i bjaelken der lige har gjort arbejdet,
+      // ikke i en dialog man skal klikke vaek.
+      setGemt(true);
+      setTimeout(() => setGemt(false), 2600);
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setFejl(e instanceof DropboxFejl ? e.besked : 'Kunne ikke gemme til Dropbox.');
@@ -164,9 +167,9 @@ export default function Vagter({ t }: { t: Theme }) {
           <RefreshControl refreshing={false} onRefresh={() => hent(true)} tintColor={t.accent} />
         }
       >
-        <Text style={[s.h1, { color: t.text }]}>Auto Vagt</Text>
-
         <Vaelger muligheder={MULIGHEDER} valgt={valg} vaelg={setValg} t={t} daempet={daempet} />
+
+        <Text style={[s.h1, { color: t.faint }]}>Auto Vagt</Text>
 
         {!harOpsaetning ? <Fejllinje t={t} tekst="Ingen Dropbox-adgang. Udfyld .env." /> : null}
         {fejl ? <Fejllinje t={t} tekst={fejl} /> : null}
@@ -270,15 +273,18 @@ export default function Vagter({ t }: { t: Theme }) {
         )}
       </ScrollView>
 
-      {aendret ? (
+      {aendret || gemt ? (
         <Animated.View
           entering={daempet ? FadeIn.duration(120) : SlideInDown.duration(240).springify().damping(21)}
           exiting={daempet ? undefined : SlideOutDown.duration(150)}
           style={[s.bjaelke, { backgroundColor: t.bg, borderTopColor: t.line }]}
         >
-          <Text style={[s.bjaelkeTekst, { color: t.dim }]}>
-            {oensker?.datoer.length ?? 0} dage · {aktiveSteder} steder
+          <Text style={[s.bjaelkeTekst, { color: gemt ? t.done : t.dim }]}>
+            {gemt
+              ? 'Gemt. Scripterne genlæser inden for 5 minutter.'
+              : (oensker?.datoer.length ?? 0) + ' dage · ' + aktiveSteder + ' steder'}
           </Text>
+          {gemt ? null : (
           <Pressable
             onPress={gem}
             disabled={gemmer}
@@ -292,6 +298,7 @@ export default function Vagter({ t }: { t: Theme }) {
               <Text style={[s.gemTekst, { color: t.bg }]}>Gem</Text>
             )}
           </Pressable>
+          )}
         </Animated.View>
       ) : null}
     </View>
@@ -303,7 +310,7 @@ function Statuslinje({
 }: { t: Theme; navn: string; status?: Status; slag: number; daempet: boolean }) {
   if (!status) return null;
   const tl = tilstand(status);
-  const farve = tl === 'ok' ? t.done : tl === 'advarsel' ? '#BA7517' : '#E24B4A';
+  const farve = tl === 'ok' ? t.done : tl === 'advarsel' ? t.advarsel : t.fejl;
   const ord = tl === 'ok' ? 'kører' : tl === 'advarsel' ? 'tavs' : 'stoppet';
 
   return (
@@ -377,21 +384,21 @@ function Genvej({ t, tekst, tryk }: { t: Theme; tekst: string; tryk: () => void 
 
 function Fejllinje({ t, tekst }: { t: Theme; tekst: string }) {
   return (
-    <Animated.View entering={FadeIn.duration(160)} style={s.fejl}>
-      <View style={[s.fejlStreg, { backgroundColor: '#E24B4A' }]} />
+    <View style={s.fejl}>
+      <Text style={[s.fejlMaerkat, { color: t.fejl }]}>Fejl</Text>
       <Text style={[s.fejlTekst, { color: t.text }]}>{tekst}</Text>
-    </Animated.View>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  pad: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 44 },
-  h1: { ...Type.largeTitle, marginBottom: 18 },
+  pad: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 44 },
+  h1: { ...Type.caption1, marginBottom: 14, marginTop: 2 },
   spinner: { marginTop: 60 },
 
   status: { paddingBottom: 20 },
   statusTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusNavn: { ...Type.headline, flex: 1 },
+  statusNavn: { ...Type.title2, flex: 1 },
   statusTid: { ...Type.caption1 },
 
   tal: { flexDirection: 'row', marginTop: 12, gap: 30 },
@@ -424,8 +431,8 @@ const s = StyleSheet.create({
 
   fod: { ...Type.caption1, marginTop: 22 },
 
-  fejl: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  fejlStreg: { width: 2, borderRadius: 1 },
+  fejl: { flexDirection: 'row', gap: 9, marginBottom: 16, alignItems: 'baseline' },
+  fejlMaerkat: { ...Type.footnote, fontWeight: '700' },
   fejlTekst: { ...Type.footnote, flex: 1 },
 
   bjaelke: {

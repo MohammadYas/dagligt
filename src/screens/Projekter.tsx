@@ -3,7 +3,7 @@ import {
   View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, Platform, Linking,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { PROJEKTER, Projekt } from '../projekter';
@@ -117,8 +117,8 @@ export default function Projekter({ t }: { t: Theme }) {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={s.pad}>
       <Text style={[s.h1, { color: t.text }]}>Projekter</Text>
 
-      {PROJEKTER.map((p, i) => (
-        <Animated.View key={p.id} entering={FadeInDown.delay(i * 60).duration(280)}>
+      {PROJEKTER.map((p) => (
+        <View key={p.id}>
           <Pressable
             onPress={() => aabn(p)}
             style={({ pressed }) => [s.raekke, { borderTopColor: t.line, opacity: pressed ? 0.55 : 1 }]}
@@ -126,7 +126,7 @@ export default function Projekter({ t }: { t: Theme }) {
             accessibilityLabel={p.navn + ', ' + p.beskrivelse}
           >
             <Puls
-              farve={liv[p.id] === 'nede' ? '#E24B4A' : liv[p.id] === 'oppe' ? t.done : t.faint}
+              farve={liv[p.id] === 'nede' ? t.fejl : liv[p.id] === 'oppe' ? t.done : t.faint}
               slag={slag}
               daempet={false}
             />
@@ -141,14 +141,14 @@ export default function Projekter({ t }: { t: Theme }) {
               color={t.faint}
             />
           </Pressable>
-        </Animated.View>
+        </View>
       ))}
 
-      <Animated.Text entering={FadeIn.delay(200)} style={[s.fod, { color: t.faint }]}>
+      <Text style={[s.fod, { color: t.faint }]}>
         {KAN_INDLEJRE
           ? 'Åbner inde i appen. Ikonet øverst til højre sender siden videre til Safari.'
           : 'Browseren kan ikke vise dem indlejret, så de åbner i en ny fane.'}
-      </Animated.Text>
+      </Text>
 
       <Koder t={t} daempet={false} />
     </ScrollView>
@@ -156,7 +156,7 @@ export default function Projekter({ t }: { t: Theme }) {
 }
 
 const s = StyleSheet.create({
-  pad: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 44 },
+  pad: { paddingHorizontal: 24, paddingTop: 26, paddingBottom: 48 },
   h1: { ...Type.largeTitle, marginBottom: 14 },
 
   raekke: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 18, borderTopWidth: 1 },

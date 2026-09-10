@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, Pressable, ScrollView, StyleSheet, AccessibilityInfo, Alert,
 } from 'react-native';
 import Animated, {
-  FadeIn, FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring,
+  FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -39,7 +39,6 @@ export default function Fang({ db, update, t }: Props) {
     try {
       const r = await rens(raa);
       saet(id, { tilstand: 'renset', titel: r.titel, renset: r.tekst });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       saet(id, { tilstand: 'fejl', fejl: e instanceof Error ? e.message : 'Rensning mislykkedes.' });
     }
@@ -124,7 +123,7 @@ export default function Fang({ db, update, t }: Props) {
       {items.length === 0 ? (
         <Text style={[s.tom, { color: t.faint }]}>Tom. Sådan skal den helst se ud sidst på dagen.</Text>
       ) : (
-        items.map((c, i) => (
+        items.map((c) => (
           <Note
             key={c.id}
             c={c}
@@ -134,7 +133,6 @@ export default function Fang({ db, update, t }: Props) {
             proevIgen={() => rensNote(c.id, c.text)}
             t={t}
             daempet={daempet}
-            forsinkelse={Math.min(i, 6) * 40}
           />
         ))
       )}
@@ -143,10 +141,10 @@ export default function Fang({ db, update, t }: Props) {
 }
 
 function Note({
-  c, aaben, fold, slet, proevIgen, t, daempet, forsinkelse,
+  c, aaben, fold, slet, proevIgen, t, daempet,
 }: {
   c: Capture; aaben: boolean; fold: () => void; slet: () => void; proevIgen: () => void;
-  t: Theme; daempet: boolean; forsinkelse: number;
+  t: Theme; daempet: boolean;
 }) {
   const venter = c.tilstand === 'venter';
   const drej = useSharedValue(0);
@@ -162,10 +160,7 @@ function Note({
   const overskrift = c.titel ?? c.text;
 
   return (
-    <Animated.View
-      entering={daempet ? undefined : FadeInDown.delay(forsinkelse).duration(260)}
-      style={[s.note, { borderTopColor: t.line }]}
-    >
+    <View style={[s.note, { borderTopColor: t.line }]}>
       <Pressable
         onPress={fold}
         onLongPress={slet}
@@ -212,11 +207,11 @@ function Note({
           ) : null}
 
           <Pressable onPress={slet} style={s.slet}>
-            <Text style={[s.sletTekst, { color: '#E24B4A' }]}>Slet</Text>
+            <Text style={[s.sletTekst, { color: t.fejl }]}>Slet</Text>
           </Pressable>
         </Animated.View>
       ) : null}
-    </Animated.View>
+    </View>
   );
 }
 
@@ -251,7 +246,7 @@ function naar(ts: number) {
 }
 
 const s = StyleSheet.create({
-  pad: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 44 },
+  pad: { paddingHorizontal: 24, paddingTop: 22, paddingBottom: 48 },
   h1: { ...Type.largeTitle, marginBottom: 18 },
 
   raekke: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },

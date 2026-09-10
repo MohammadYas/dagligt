@@ -4,7 +4,7 @@ import {
   Linking, AccessibilityInfo, Alert,
 } from 'react-native';
 import Animated, {
-  FadeIn, FadeInDown, LinearTransition, useSharedValue, useAnimatedStyle, withSpring,
+  FadeIn, LinearTransition, useSharedValue, useAnimatedStyle, withSpring,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -89,7 +89,6 @@ export default function Rute({ t }: { t: Theme }) {
       const r = await planlaeg(stop);
       setRute(r);
       setStop(r.orden);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       setFejl(e instanceof Error ? e.message : 'Kunne ikke beregne ruten.');
     } finally {
@@ -183,7 +182,7 @@ export default function Rute({ t }: { t: Theme }) {
           </Animated.View>
         )}
 
-        {fejl ? <Text style={[s.fejl, { color: '#E24B4A' }]}>{fejl}</Text> : null}
+        {fejl ? <Text style={[s.fejl, { color: t.fejl }]}>{fejl}</Text> : null}
 
         {rute ? (
           <Animated.View entering={daempet ? undefined : FadeIn.duration(240)} style={s.resultat}>
@@ -271,10 +270,7 @@ function Stoprakke({
   const rest = dele.slice(1).join(', ');
 
   return (
-    <Animated.View
-      entering={daempet ? undefined : FadeInDown.duration(220)}
-      style={[s.raekke, { borderTopColor: t.line }]}
-    >
+    <View style={[s.raekke, { borderTopColor: t.line }]}>
       <View style={s.spor}>
         <Animated.View
           style={[
@@ -296,13 +292,13 @@ function Stoprakke({
       <Pressable onPress={fjern} hitSlop={10} accessibilityLabel={'Fjern ' + vej}>
         <Ionicons name="close" size={18} color={t.faint} />
       </Pressable>
-    </Animated.View>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  pad: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 44 },
-  h1: { ...Type.largeTitle, marginBottom: 16 },
+  pad: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 44 },
+  h1: { ...Type.title1, marginBottom: 14 },
 
   soegRum: { justifyContent: 'center' },
   felt: {

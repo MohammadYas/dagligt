@@ -9,7 +9,7 @@ import { Theme } from '../theme';
 import { Sted } from '../vagter';
 import { GRUPPER } from '../steder';
 import { Type, Tal } from '../type';
-import { snappy, bouncy, daempetSkift } from '../motion';
+import { snappy, daempetSkift } from '../motion';
 
 type Props = {
   steder: Sted[];
@@ -139,7 +139,7 @@ function Raekke({
   function tryk() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!daempet) {
-      skala.value = withSpring(1.25, bouncy, (f) => {
+      skala.value = withSpring(1.18, snappy, (f) => {
         if (f) skala.value = withSpring(1, snappy);
       });
     }

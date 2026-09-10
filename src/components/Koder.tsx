@@ -73,7 +73,6 @@ export default function Koder({ t, daempet }: { t: Theme; daempet: boolean }) {
       setFejl(e instanceof Error ? e.message : 'Hemmeligheden kunne ikke bruges.');
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     gem([...konti, { id: uid(), navn: navn.trim() || læst.navn || 'Konto', hemmelighed: læst.hemmelighed }]);
     setNavn('');
     setHemmelighed('');
@@ -127,7 +126,7 @@ export default function Koder({ t, daempet }: { t: Theme; daempet: boolean }) {
             autoCapitalize="none"
             autoCorrect={false}
           />
-          {fejl ? <Text style={[s.fejl, { color: '#E24B4A' }]}>{fejl}</Text> : null}
+          {fejl ? <Text style={[s.fejl, { color: t.fejl }]}>{fejl}</Text> : null}
           <Pressable onPress={tilfoej} style={[s.gem, { backgroundColor: t.accent }]}>
             <Text style={[s.gemTekst, { color: t.bg }]}>Tilføj</Text>
           </Pressable>
@@ -201,7 +200,7 @@ function Raekke({
     >
       <View style={{ flex: 1 }}>
         <Text style={[s.navn, { color: t.faint }]}>{k.navn}</Text>
-        <Text style={[s.kode, { color: knap ? '#BA7517' : t.text }]}>
+        <Text style={[s.kode, { color: knap ? t.advarsel : t.text }]}>
           {tal.slice(0, 3)} {tal.slice(3)}
         </Text>
       </View>
@@ -211,7 +210,7 @@ function Raekke({
           kopieret
         </Animated.Text>
       ) : (
-        <Ur sek={sek} farve={knap ? '#BA7517' : t.accent} spor={t.line} daempet={daempet} />
+        <Ur sek={sek} farve={knap ? t.advarsel : t.accent} spor={t.line} daempet={daempet} />
       )}
     </Pressable>
   );
