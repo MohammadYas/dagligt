@@ -105,6 +105,13 @@ afsnit('Statusfiler fra scripterne');
   ok('tre timer melder ikke', tilstand(doed) === 'advarsel');
   ok('graensen er halvanden time', TAVS_EFTER_MS === 5400000);
 
+  // Scriptmaskinens ur gaar ni timer forkert; Dropbox' stempel skal vinde
+  const forkertUr = tankestreg.replace(/Sidste tjek: .*/, 'Sidste tjek: 2026-01-01 03:00:00');
+  const medStempel = parseStatus(forkertUr, new Date(Date.now() - 20 * 60000));
+  ok('Dropbox-stempel slaar filens egen tid', tilstand(medStempel) === 'ok');
+  const gammeltStempel = parseStatus(forkertUr, new Date(Date.now() - 200 * 60000));
+  ok('gammelt stempel melder ikke', tilstand(gammeltStempel) === 'advarsel');
+
   const stoppet = parseStatus(tankestreg.replace('Kører: JA', 'Kører: STOPPET'));
   ok('stoppet script er fejl', tilstand(stoppet) === 'fejl');
 

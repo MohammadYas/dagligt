@@ -67,9 +67,20 @@ export default async (request) => {
       },
     });
     const tekst = await r.text();
+    // Dropbox' eget skrivetidspunkt sendes med: maskinen der koerer
+    // scripterne har et ur der gaar forkert, saa filens egen tid lyver.
+    let skrevet = '';
+    try {
+      skrevet = JSON.parse(r.headers.get('dropbox-api-result') ?? '{}').server_modified ?? '';
+    } catch {}
+
     return new Response(tekst, {
       status: r.status,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Access-Control-Expose-Headers': 'x-skrevet',
+        ...(skrevet ? { 'x-skrevet': skrevet } : {}),
+      },
     });
   }
 

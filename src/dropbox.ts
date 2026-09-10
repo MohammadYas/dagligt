@@ -71,6 +71,50 @@ function oversaetFejl(status: number, krop: string): DropboxFejl {
   return new DropboxFejl(`Dropbox svarede ${status}. ${kort}`, status);
 }
 
+export type Fil = { tekst: string; skrevet: Date | null };
+
+/** Tidspunktet Dropbox selv noterede. Foelger med i svaret, gratis. */
+function skrevetFra(h: Headers): Date | null {
+  const raa = h.get('dropbox-api-result') ?? h.get('x-skrevet');
+  if (!raa) return null;
+  try {
+    const naar = raa.startsWith('{') ? JSON.parse(raa).server_modified : raa;
+    const d = new Date(naar);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Som hentFil, men med det tidspunkt Dropbox skrev filen.
+ *
+ * Maskinen der koerer scripterne har et ur der gaar ni timer forkert, saa
+ * "Sidste tjek" i filen kan ikke bruges til at maale alder. Dropbox'
+ * eget stempel er uafhaengigt af den maskines ur.
+ */
+export async function hentStatus(sti: string): Promise<Fil> {
+  if (erWeb) {
+    if (!harAdgang()) throw new DropboxFejl('Appen er ikke låst op.', 401);
+    const r = await fetch('/api/dropbox?sti=' + encodeURIComponent(sti), {
+      headers: adgangsHeader(),
+    });
+    if (!r.ok) throw oversaetFejl(r.status, await r.text());
+    return { tekst: await r.text(), skrevet: skrevetFra(r.headers) };
+  }
+
+  const t = await adgangstoken();
+  const svar = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${t}`,
+      'Dropbox-API-Arg': JSON.stringify({ path: sti }),
+    },
+  });
+  if (!svar.ok) throw oversaetFejl(svar.status, await svar.text());
+  return { tekst: await svar.text(), skrevet: skrevetFra(svar.headers) };
+}
+
 export async function hentFil(sti: string): Promise<string> {
   if (erWeb) {
     if (!harAdgang()) throw new DropboxFejl('Appen er ikke låst op.', 401);

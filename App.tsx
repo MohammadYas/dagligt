@@ -35,7 +35,9 @@ export default function App() {
   const [laast, setLaast] = useState(erWeb && !harAdgang());
 
   // Safari giver ingen sikker zone paa web, saa bundlinjen loeftes selv.
-  const bundLoeft = erStandalone() ? 26 : erWeb ? 10 : 0;
+  // env(safe-area-inset-bottom) i index.html holder allerede plads til
+  // hjemme-indikatoren; et ekstra loeft her ville laegge sig oveni.
+  const bundLoeft = erStandalone() ? 0 : erWeb ? 8 : 0;
 
   useEffect(() => {
     load().then((d) => {

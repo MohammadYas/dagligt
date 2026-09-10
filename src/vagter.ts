@@ -146,7 +146,7 @@ export type Status = {
  */
 export const TAVS_EFTER_MS = 90 * 60_000;
 
-export function parseStatus(raa: string): Status {
+export function parseStatus(raa: string, skrevet?: Date | null): Status {
   const find = (m: RegExp) => raa.match(m);
 
   const koererM = find(/Kører:\s*(JA|NEJ|STOPPET)/i);
@@ -158,14 +158,17 @@ export function parseStatus(raa: string): Status {
   const dineM = find(/Dine vagter:\s*(.+)/i);
   const modeM = find(/Mode:\s*(.+)/i);
 
+  // Filens egen tid vises, men alderen maales paa Dropbox' stempel naar
+  // det findes — scriptmaskinens ur kan ikke stoles paa.
   const sidsteTjek = tjekM ? new Date(`${tjekM[1]}T${tjekM[2]}`) : null;
-  const alder = sidsteTjek ? Date.now() - sidsteTjek.getTime() : 0;
+  const maalt = skrevet ?? sidsteTjek;
+  const alder = maalt ? Date.now() - maalt.getTime() : 0;
 
   return {
     raa,
     koerer: (koererM?.[1] ?? '').toUpperCase() === 'JA',
     fejl: fejlM ? parseInt(fejlM[1], 10) : 0,
-    sidsteTjek,
+    sidsteTjek: maalt,
     ledige: vagterM ? parseInt(vagterM[1], 10) : null,
     matcher: vagterM ? parseInt(vagterM[2], 10) : null,
     taget: tagetM?.[1] ?? null,

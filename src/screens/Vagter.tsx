@@ -6,7 +6,7 @@ import {
 import Animated, { FadeIn, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
-import { hentFil, gemFil, DropboxFejl, erOpsat } from '../dropbox';
+import { hentFil, hentStatus, gemFil, DropboxFejl, erOpsat } from '../dropbox';
 import {
   Script, FILER, Oensker, Status, parseOensker,
   parseStatus, tilstand, siden, medKatalog, serialiserMedSkabelon,
@@ -65,7 +65,8 @@ export default function Vagter({ t }: { t: Theme }) {
       try {
         const nye: Partial<Record<Script, Status>> = {};
         for (const sc of scripts) {
-          nye[sc] = parseStatus(await hentFil(FILER[sc].status));
+          const f = await hentStatus(FILER[sc].status);
+          nye[sc] = parseStatus(f.tekst, f.skrevet);
         }
         if (mit !== koersel.current) return;
         setStatus(nye);

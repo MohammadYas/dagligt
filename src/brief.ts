@@ -1,5 +1,5 @@
 import { DB, dayKey, longDate, greeting, streak } from './store';
-import { hentFil } from './dropbox';
+import { hentFil, hentStatus } from './dropbox';
 import { FILER, parseOensker, parseStatus, tilstand, Script } from './vagter';
 
 import { spoerg } from './ai';
@@ -26,7 +26,8 @@ export async function saml(db: DB): Promise<Kilder> {
 
   for (const sc of ['cas', 'torn'] as Script[]) {
     try {
-      const s = parseStatus(await hentFil(FILER[sc].status));
+      const f = await hentStatus(FILER[sc].status);
+      const s = parseStatus(f.tekst, f.skrevet);
       scripts.push({
         navn: FILER[sc].navn,
         tilstand: tilstand(s),
