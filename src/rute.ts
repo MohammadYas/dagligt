@@ -128,7 +128,7 @@ function luftlinje(a: Stop, b: Stop): number {
 }
 
 /** Google Maps tager hoejst 9 mellemstop pr. link, saa lange ruter deles i etaper. */
-export function kortLinks(orden: Stop[]): string[] {
+export function kortLinks(orden: Stop[], startErMigSelv = false): string[] {
   if (orden.length < 2) return [];
 
   const etaper: Stop[][] = [];
@@ -140,12 +140,15 @@ export function kortLinks(orden: Stop[]): string[] {
     i += MAKS - 1; // sidste stop i en etape er foerste i den naeste
   }
 
-  return etaper.map((del) => {
+  return etaper.map((del, i) => {
     const p = (s: Stop) => `${s.lat},${s.lon}`;
-    const mellem = del.slice(1, -1).map(p).join('|');
+    // Starter ruten hvor du staar, udelades origin: Maps bruger din
+    // position i det oejeblik du aabner linket, ikke da du lagde ruten.
+    const skipOrigin = startErMigSelv && i === 0;
+    const mellem = (skipOrigin ? del.slice(0, -1) : del.slice(1, -1)).map(p).join('|');
     return (
       'https://www.google.com/maps/dir/?api=1' +
-      `&origin=${p(del[0])}` +
+      (skipOrigin ? '' : `&origin=${p(del[0])}`) +
       `&destination=${p(del[del.length - 1])}` +
       (mellem ? `&waypoints=${encodeURIComponent(mellem)}` : '') +
       '&travelmode=driving'

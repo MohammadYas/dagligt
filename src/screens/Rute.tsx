@@ -14,6 +14,7 @@ import { snappy, smooth } from '../motion';
 import { soeg, Forslag } from '../dawa';
 import { Stop, Rute as RuteType, planlaeg, kortLinks, tid, afstand } from '../rute';
 import { uid } from '../store';
+import { hentPlacering, forklar, Tilstand } from '../placering';
 
 export default function Rute({ t }: { t: Theme }) {
   const [q, setQ] = useState('');
@@ -24,12 +25,27 @@ export default function Rute({ t }: { t: Theme }) {
   const [planlaegger, setPlanlaegger] = useState(false);
   const [fejl, setFejl] = useState<string | null>(null);
   const [daempet, setDaempet] = useState(false);
+  const [start, setStart] = useState<Tilstand>('ukendt');
+  const [startPunkt, setStartPunkt] = useState<Stop | null>(null);
 
   const afbryd = useRef<AbortController | null>(null);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setDaempet);
+    brugPlacering();
   }, []);
+
+  async function brugPlacering() {
+    setStart('henter');
+    const svar = await hentPlacering();
+    setStart(svar.tilstand);
+    setStartPunkt(
+      svar.punkt
+        ? { id: 'mig', tekst: 'Min placering', lon: svar.punkt.lon, lat: svar.punkt.lat }
+        : null,
+    );
+    setRute(null);
+  }
 
   useEffect(() => {
     if (q.trim().length < 3) {
@@ -86,9 +102,11 @@ export default function Rute({ t }: { t: Theme }) {
     setPlanlaegger(true);
     setFejl(null);
     try {
-      const r = await planlaeg(stop);
+      const medStart = startPunkt ? [startPunkt, ...stop] : stop;
+      const r = await planlaeg(medStart);
       setRute(r);
-      setStop(r.orden);
+      // Startpunktet hoerer ikke til i adresselisten; den viser stederne.
+      setStop(r.orden.filter((x) => x.id !== 'mig'));
     } catch (e) {
       setFejl(e instanceof Error ? e.message : 'Kunne ikke beregne ruten.');
     } finally {
@@ -96,7 +114,7 @@ export default function Rute({ t }: { t: Theme }) {
     }
   }
 
-  const links = rute ? kortLinks(rute.orden) : [];
+  const links = rute ? kortLinks(rute.orden, Boolean(startPunkt)) : [];
 
   return (
     <View style={{ flex: 1 }}>
@@ -147,6 +165,25 @@ export default function Rute({ t }: { t: Theme }) {
             ))}
           </Animated.View>
         ) : null}
+
+        <Pressable
+          onPress={brugPlacering}
+          disabled={start === 'henter'}
+          style={[s.start, { borderTopColor: t.line }]}
+        >
+          <View style={[s.startPrik, { borderColor: startPunkt ? t.accent : t.faint }]}>
+            {startPunkt ? <View style={[s.startKerne, { backgroundColor: t.accent }]} /> : null}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.startNavn, { color: startPunkt ? t.text : t.dim }]}>Min placering</Text>
+            <Text style={[s.startUnder, { color: t.faint }]}>{forklar(start)}</Text>
+          </View>
+          {start === 'henter' ? (
+            <ActivityIndicator size="small" color={t.faint} />
+          ) : (
+            <Ionicons name="locate-outline" size={18} color={t.accent} />
+          )}
+        </Pressable>
 
         <View style={s.overskrift}>
           <Text style={[s.overskriftTekst, { color: t.text }]}>
@@ -312,9 +349,15 @@ const s = StyleSheet.create({
   forslagKort: { ...Type.callout },
   forslagBy: { ...Type.caption1, marginTop: 1 },
 
+  start: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15, borderTopWidth: 1, marginTop: 26 },
+  startPrik: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  startKerne: { width: 9, height: 9, borderRadius: 5 },
+  startNavn: { ...Type.callout, fontWeight: '600' },
+  startUnder: { ...Type.caption1, marginTop: 1 },
+
   overskrift: {
     flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-    marginTop: 28, marginBottom: 6,
+    marginTop: 22, marginBottom: 6,
   },
   overskriftTekst: { ...Type.title3 },
   hoejre: { flexDirection: 'row', alignItems: 'baseline', gap: 14 },

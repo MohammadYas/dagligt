@@ -258,6 +258,19 @@ afsnit('DAWA');
 
   const rude = await soeg('Østervej 4, Rude');
   ok('Rude er 4243, ikke Holte', rude[0]?.post?.includes('4243') === true, String(rude[0]?.tekst));
+
+  // Stavefejl skal ikke koste et opslag
+  const slaafejl: [string, string][] = [
+    ['Hasøjvej 7', 'Hashøjvej'],
+    ['Rosenkildvej 4', 'Rosenkildevej'],
+    ['Tårnborgvei 1', 'Tårnborgvej'],
+    ['Havrebjerjvej 1', 'Havrebjergvej'],
+    ['Smedegde 32, 4200 Slagelse', 'Smedegade'],
+  ];
+  for (const [skrevet, forventet] of slaafejl) {
+    const r = await soeg(skrevet);
+    ok('slåfejl: ' + skrevet, r.some((x: any) => x.kort.startsWith(forventet)), r[0]?.tekst ?? 'INTET');
+  }
 }
 
 afsnit('Ruteberegning');
@@ -289,6 +302,11 @@ afsnit('Ruteberegning');
 
   const links = kortLinks(rute.orden);
   ok('ét link til fire stop', links.length === 1);
+
+  const fraMig = kortLinks(rute.orden, true);
+  ok('start hos mig udelader origin', !fraMig[0].includes('origin='), fraMig[0].slice(0, 60));
+  ok('start hos mig beholder alle stop',
+    (fraMig[0].match(/%2C/g) || []).length + 1 >= rute.orden.length - 1);
   ok('linket har origin, destination og waypoints',
     links[0].includes('origin=') && links[0].includes('destination=') && links[0].includes('waypoints='));
 

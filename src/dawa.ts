@@ -64,15 +64,42 @@ function byg(a: DawaAdresse): Forslag | null {
   };
 }
 
-async function hent(q: string, kommune: string | null, antal: number, signal?: AbortSignal) {
+async function hent(
+  q: string,
+  kommune: string | null,
+  antal: number,
+  fuzzy: boolean,
+  signal?: AbortSignal,
+) {
   const url =
     `${BASIS}/adresser/autocomplete?q=${encodeURIComponent(q)}` +
     (kommune ? `&kommunekode=${kommune}` : '') +
+    (fuzzy ? '&fuzzy=' : '') +
     `&per_side=${antal}`;
 
   const svar = await fetch(url, { signal });
   if (!svar.ok) throw new Error(`Adresseopslag svarede ${svar.status}.`);
   return (await svar.json()) as { adresse?: DawaAdresse }[];
+}
+
+/**
+ * DAWA's adressevask. Den taaler mere rod end autocomplete — "Smedegde 32"
+ * bliver til Smedegade — men svarer uden koordinater. Derfor bruges den kun
+ * til at rette stavningen, hvorefter det rettede slaas op paa normal vis.
+ */
+async function vask(q: string, signal?: AbortSignal): Promise<string | null> {
+  const url = `${BASIS}/datavask/adresser?betegnelse=${encodeURIComponent(q)}`;
+  const svar = await fetch(url, { signal });
+  if (!svar.ok) return null;
+
+  const j = (await svar.json()) as {
+    kategori?: string;
+    resultater?: { adresse?: DawaAdresse }[];
+  };
+  const a = j.resultater?.[0]?.adresse;
+  if (!a?.vejnavn || !a.husnr) return null;
+
+  return [a.vejnavn + ' ' + a.husnr, a.postnr, a.postnrnavn].filter(Boolean).join(' ');
 }
 
 /**
@@ -96,15 +123,29 @@ export async function soeg(q: string, signal?: AbortSignal): Promise<Forslag[]> 
     }
   }
 
-  saml(await hent(raa, SLAGELSE, 20, signal));
+  // 1. Praecis skrivning i egen kommune.
+  saml(await hent(raa, SLAGELSE, 20, false, signal));
 
-  // Kun naar kommunen ikke kunne svare ordentligt, spoerges hele landet.
-  if (ud.length < 5) {
+  // 2. Samme kommune, men med plads til slaafejl.
+  if (ud.length < 8) {
     try {
-      saml(await hent(raa, null, 12, signal));
-    } catch {
-      // Det lokale svar staar ved magt.
-    }
+      saml(await hent(raa, SLAGELSE, 20, true, signal));
+    } catch {}
+  }
+
+  // 3. Adressevask retter stavningen, og det rettede slaas op paa ny.
+  if (ud.length === 0) {
+    try {
+      const rettet = await vask(raa, signal);
+      if (rettet) saml(await hent(rettet, SLAGELSE, 10, true, signal));
+    } catch {}
+  }
+
+  // 4. Foerst herefter resten af landet.
+  if (ud.length === 0) {
+    try {
+      saml(await hent(raa, null, 12, true, signal));
+    } catch {}
   }
 
   return ud.slice(0, 12);

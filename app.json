@@ -38,7 +38,15 @@
           "speechRecognitionPermission": "Bruges til at skrive det du siger om til tekst."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Bruges til at lægge ruten ud fra hvor du står nu.",
+          "locationWhenInUsePermission": "Bruges til at lægge ruten ud fra hvor du står nu.",
+          "isIosBackgroundLocationEnabled": false
+        }
+      ]
     ]
   }
 }
