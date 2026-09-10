@@ -11,7 +11,7 @@ export const PROJEKTER: Projekt[] = [
     id: 'selja',
     navn: 'Selja',
     beskrivelse: 'selja.dk · admin',
-    url: 'https://selja.dk/admin',
+    url: 'https://selja.dk/log-ind?videre=%2Fadmin',
     ikon: 'briefcase-outline',
   },
   {

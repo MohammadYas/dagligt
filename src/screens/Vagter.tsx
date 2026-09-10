@@ -3,10 +3,7 @@ import {
   View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator,
   RefreshControl, Platform, Alert, AccessibilityInfo, Linking,
 } from 'react-native';
-import Animated, {
-  FadeIn, FadeInDown, SlideInDown, SlideOutDown, LinearTransition,
-} from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeIn, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
 import { hentFil, gemFil, DropboxFejl, harOpsaetning } from '../dropbox';
@@ -21,7 +18,6 @@ import Stedliste from '../components/Stedliste';
 import Vaelger from '../components/Vaelger';
 import Puls from '../components/Puls';
 import RulleTal from '../components/RulleTal';
-import Dagbaand from '../components/Dagbaand';
 
 type Valg = 'cas' | 'torn' | 'begge';
 
@@ -92,7 +88,6 @@ export default function Vagter({ t }: { t: Theme }) {
   }, [valg]);
 
   useEffect(() => {
-    // Scripterne skriver statusfilen hvert minut.
     const id = setInterval(() => hent(false), 60000);
     return () => clearInterval(id);
   }, [hent]);
@@ -116,7 +111,6 @@ export default function Vagter({ t }: { t: Theme }) {
     setAendret(true);
   }
 
-  /** Vaelger i dag og de naeste n-1 dage. */
   function vaelgDage(antal: number) {
     Haptics.selectionAsync();
     const ud: string[] = [];
@@ -130,9 +124,7 @@ export default function Vagter({ t }: { t: Theme }) {
 
   function skiftSted(navn: string) {
     setOensker((o) =>
-      o
-        ? { ...o, steder: o.steder.map((x) => (x.navn === navn ? { ...x, aktiv: !x.aktiv } : x)) }
-        : o,
+      o ? { ...o, steder: o.steder.map((x) => (x.navn === navn ? { ...x, aktiv: !x.aktiv } : x)) } : o,
     );
     setAendret(true);
   }
@@ -155,12 +147,7 @@ export default function Vagter({ t }: { t: Theme }) {
       for (const sc of maal) await gemFil(FILER[sc].oensker, tekst);
       setAendret(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        'Gemt',
-        maal.length > 1
-          ? 'Ønskerne ligger nu i både dage.txt og torn_dage.txt. Scripterne genlæser inden for 5 minutter.'
-          : 'Ønskerne ligger nu i ' + FILER[maal[0]].oensker + '. Scriptet genlæser inden for 5 minutter.',
-      );
+      Alert.alert('Gemt', 'Scripterne genlæser filen inden for 5 minutter.');
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setFejl(e instanceof DropboxFejl ? e.besked : 'Kunne ikke gemme til Dropbox.');
@@ -175,7 +162,7 @@ export default function Vagter({ t }: { t: Theme }) {
     <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[s.pad, aendret && { paddingBottom: 110 }]}
+        contentContainerStyle={[s.pad, aendret && { paddingBottom: 108 }]}
         refreshControl={
           <RefreshControl refreshing={false} onRefresh={() => hent(true)} tintColor={t.accent} />
         }
@@ -184,73 +171,74 @@ export default function Vagter({ t }: { t: Theme }) {
 
         <Vaelger muligheder={MULIGHEDER} valgt={valg} vaelg={setValg} t={t} daempet={daempet} />
 
-        {!harOpsaetning ? (
-          <Banner t={t} type="fejl" tekst="Ingen Dropbox-adgang opsat. Udfyld .env i projektet." />
-        ) : null}
-        {fejl ? <Banner t={t} type="fejl" tekst={fejl} /> : null}
+        {!harOpsaetning ? <Fejllinje t={t} tekst="Ingen Dropbox-adgang. Udfyld .env." /> : null}
+        {fejl ? <Fejllinje t={t} tekst={fejl} /> : null}
 
         {henter ? (
-          <View style={s.midt}>
-            <ActivityIndicator color={t.accent} />
-          </View>
+          <ActivityIndicator color={t.accent} style={s.spinner} />
         ) : (
-          <Animated.View layout={daempet ? undefined : LinearTransition.duration(220)}>
-            {scripts.map((sc, i) => (
-              <StatusKort
+          <>
+            {scripts.map((sc) => (
+              <Statuslinje
                 key={sc}
                 t={t}
                 navn={FILER[sc].navn}
                 status={status[sc]}
-                visRaa={visRaa}
                 slag={slag}
                 daempet={daempet}
-                forsinkelse={i * 70}
               />
             ))}
 
-            <Pressable onPress={() => setVisRaa((v) => !v)} style={s.link} hitSlop={8}>
-              <Ionicons
-                name={visRaa ? 'code-slash' : 'code-slash-outline'}
-                size={14}
-                color={t.accent}
-              />
-              <Text style={[s.linkTekst, { color: t.accent }]}>
-                {visRaa ? 'Skjul rå statusfil' : 'Vis rå statusfil'}
+            <Pressable onPress={() => setVisRaa((v) => !v)} hitSlop={10} style={s.raaKnap}>
+              <Text style={[s.raaKnapTekst, { color: t.faint }]}>
+                {visRaa ? 'Skjul filen' : 'Vis filen'}
               </Text>
             </Pressable>
 
-            <View style={[s.kort, { backgroundColor: t.card, borderColor: t.line }]}>
-              <Text style={[s.kortTitel, { color: t.text }]}>Dage</Text>
-              <Text style={[s.under, { color: t.dim }]}>
-                {oensker?.datoer.length
-                  ? oensker.datoer.length + ' dage valgt i alt'
-                  : 'Ingen dage valgt — så tillades alle datoer'}
-              </Text>
+            {visRaa
+              ? scripts.map((sc) =>
+                  status[sc] ? (
+                    <Animated.Text
+                      key={sc}
+                      entering={daempet ? undefined : FadeIn.duration(150)}
+                      style={[s.raa, { color: t.dim }]}
+                    >
+                      {status[sc]!.raa.trim()}
+                    </Animated.Text>
+                  ) : null,
+                )
+              : null}
 
-              {oensker ? (
-                <Dagbaand valgte={oensker.datoer} skift={skiftDato} t={t} daempet={daempet} />
-              ) : null}
+            <Overskrift
+              t={t}
+              tekst="Dage"
+              hoejre={
+                oensker?.datoer.length ? oensker.datoer.length + ' valgt' : 'alle datoer tillades'
+              }
+            />
 
-              <View style={s.genveje}>
-                <Genvej t={t} tekst="7 dage frem" tryk={() => vaelgDage(7)} />
-                <Genvej t={t} tekst="14 dage frem" tryk={() => vaelgDage(14)} />
-                <Genvej t={t} tekst="Ryd" tryk={() => { Haptics.selectionAsync(); saetDatoer([]); }} />
-              </View>
-
-              {oensker ? (
-                <Kalender valgte={oensker.datoer} skift={skiftDato} t={t} daempet={daempet} />
-              ) : null}
+            <View style={s.genveje}>
+              <Genvej t={t} tekst="7 frem" tryk={() => vaelgDage(7)} />
+              <Genvej t={t} tekst="14 frem" tryk={() => vaelgDage(14)} />
+              <Genvej
+                t={t}
+                tekst="Ryd"
+                tryk={() => {
+                  Haptics.selectionAsync();
+                  saetDatoer([]);
+                }}
+              />
             </View>
 
-            <View style={s.stedTop}>
-              <Text style={[s.kortTitel, { color: t.text }]}>Steder</Text>
-              <Text style={[s.stedTael, { color: t.dim }]}>
-                {aktiveSteder} af {oensker?.steder.length ?? 0}
-              </Text>
-            </View>
-            <Text style={[s.under, { color: t.dim, marginBottom: 12 }]}>
-              Fravalgte steder bliver husket i filen og kan slås til igen når som helst.
-            </Text>
+            {oensker ? (
+              <Kalender valgte={oensker.datoer} skift={skiftDato} t={t} daempet={daempet} />
+            ) : null}
+
+            <Overskrift
+              t={t}
+              tekst="Steder"
+              hoejre={aktiveSteder + ' af ' + (oensker?.steder.length ?? 0)}
+            />
 
             {oensker ? (
               <Stedliste
@@ -262,46 +250,49 @@ export default function Vagter({ t }: { t: Theme }) {
               />
             ) : null}
 
-            {valg === 'begge' ? (
-              <Banner
-                t={t}
-                type="advarsel"
-                tekst="Begge: det du gemmer her lander i begge filer."
-              />
-            ) : null}
+            <Overskrift t={t} tekst="Sygemelding" hoejre={SYGEMELDING.telefon} />
 
-            <Sygemelding t={t} daempet={daempet} />
+            {SYGEMELDING.frister.map((f) => (
+              <View key={f.vagt} style={s.frist}>
+                <Text style={[s.fristVagt, { color: t.dim }]}>{f.vagt}</Text>
+                <Text style={[s.fristTid, { color: t.text }]}>senest {f.senest}</Text>
+              </View>
+            ))}
+
+            <Pressable
+              onPress={() => Linking.openURL('tel:' + SYGEMELDING.telefon.replace(/\s/g, ''))}
+              style={s.ring}
+            >
+              <Text style={[s.ringTekst, { color: t.accent }]}>Ring {SYGEMELDING.telefon}</Text>
+            </Pressable>
 
             <Text style={[s.fod, { color: t.faint }]}>
-              Scripterne tager kun vagter der starter mellem 15:00 og 23:00, og aldrig to samme dag.
+              Vagter starter mellem 15 og 23. Aldrig to samme dag.
             </Text>
-          </Animated.View>
+          </>
         )}
       </ScrollView>
 
       {aendret ? (
         <Animated.View
-          entering={daempet ? FadeIn.duration(120) : SlideInDown.duration(260).springify().damping(20)}
-          exiting={daempet ? undefined : SlideOutDown.duration(160)}
-          style={[s.gemBjaelke, { backgroundColor: t.card, borderTopColor: t.line }]}
+          entering={daempet ? FadeIn.duration(120) : SlideInDown.duration(240).springify().damping(21)}
+          exiting={daempet ? undefined : SlideOutDown.duration(150)}
+          style={[s.bjaelke, { backgroundColor: t.bg, borderTopColor: t.line }]}
         >
-          <View style={{ flex: 1 }}>
-            <Text style={[s.gemTitel, { color: t.text }]}>Ikke gemt endnu</Text>
-            <Text style={[s.gemUnder, { color: t.dim }]}>
-              {oensker?.datoer.length ?? 0} dage · {aktiveSteder} steder
-            </Text>
-          </View>
+          <Text style={[s.bjaelkeTekst, { color: t.dim }]}>
+            {oensker?.datoer.length ?? 0} dage · {aktiveSteder} steder
+          </Text>
           <Pressable
             onPress={gem}
             disabled={gemmer}
-            style={[s.gemKnap, { backgroundColor: t.accent, opacity: gemmer ? 0.6 : 1 }]}
+            style={[s.gem, { backgroundColor: t.accent, opacity: gemmer ? 0.6 : 1 }]}
             accessibilityRole="button"
             accessibilityLabel="Gem til Dropbox"
           >
             {gemmer ? (
               <ActivityIndicator color={t.bg} size="small" />
             ) : (
-              <Text style={[s.gemKnapTekst, { color: t.bg }]}>Gem</Text>
+              <Text style={[s.gemTekst, { color: t.bg }]}>Gem</Text>
             )}
           </Pressable>
         </Animated.View>
@@ -310,69 +301,68 @@ export default function Vagter({ t }: { t: Theme }) {
   );
 }
 
-function StatusKort({
-  t, navn, status, visRaa, slag, daempet, forsinkelse,
-}: {
-  t: Theme; navn: string; status?: Status; visRaa: boolean;
-  slag: number; daempet: boolean; forsinkelse: number;
-}) {
+function Statuslinje({
+  t, navn, status, slag, daempet,
+}: { t: Theme; navn: string; status?: Status; slag: number; daempet: boolean }) {
   if (!status) return null;
   const tl = tilstand(status);
   const farve = tl === 'ok' ? t.done : tl === 'advarsel' ? '#BA7517' : '#E24B4A';
-  const ord = tl === 'ok' ? 'Kører' : tl === 'advarsel' ? 'Tavs' : 'Stoppet';
+  const ord = tl === 'ok' ? 'kører' : tl === 'advarsel' ? 'tavs' : 'stoppet';
 
   return (
-    <Animated.View
-      entering={daempet ? undefined : FadeInDown.delay(forsinkelse).duration(280)}
-      style={[s.kort, { backgroundColor: t.card, borderColor: t.line }]}
-    >
+    <View style={s.status}>
       <View style={s.statusTop}>
         <Puls farve={farve} slag={slag} daempet={daempet} />
-        <Text style={[s.kortTitel, { color: t.text, flex: 1 }]}>{navn}</Text>
-        <Text style={[s.tilstand, { color: farve }]}>{ord}</Text>
+        <Text style={[s.statusNavn, { color: t.text }]}>
+          {navn} <Text style={{ color: farve }}>{ord}</Text>
+        </Text>
+        <Text style={[s.statusTid, { color: t.faint }]}>{siden(status.sidsteTjek)}</Text>
       </View>
 
-      <Text style={[s.under, { color: t.dim }]}>
-        Meldte sig {siden(status.sidsteTjek)}
-        {status.fejl > 0 ? ' · ' + status.fejl + ' fejl i træk' : ''}
-      </Text>
-
-      <View style={[s.talSpor, { borderTopColor: t.line }]}>
-        <Tal t={t} navn="Ledige" v={status.ledige ?? '–'} daempet={daempet} />
-        <View style={[s.skille, { backgroundColor: t.line }]} />
-        <Tal t={t} navn="Matcher" v={status.matcher ?? '–'} fremhaev={Boolean(status.matcher)} daempet={daempet} />
-        <View style={[s.skille, { backgroundColor: t.line }]} />
-        <Tal t={t} navn="Taget" v={status.taget ?? '–'} daempet={daempet} />
+      <View style={s.tal}>
+        <Maaling t={t} navn="ledige" v={status.ledige ?? '–'} daempet={daempet} />
+        <Maaling
+          t={t}
+          navn="matcher"
+          v={status.matcher ?? '–'}
+          daempet={daempet}
+          fremhaev={Boolean(status.matcher)}
+        />
+        <Maaling t={t} navn="taget" v={status.taget ?? '–'} daempet={daempet} />
+        {status.fejl > 0 ? (
+          <Maaling t={t} navn="fejl" v={status.fejl} daempet={daempet} fremhaev />
+        ) : null}
       </View>
 
-      {status.mode ? (
-        <View style={[s.mode, { backgroundColor: t.cardAlt }]}>
-          <Ionicons name="flask-outline" size={13} color={t.dim} />
-          <Text style={[s.modeTekst, { color: t.dim }]} numberOfLines={2}>
-            {status.mode}
-          </Text>
-        </View>
+      {status.dine && status.dine.toLowerCase() !== 'ingen' ? (
+        <Text style={[s.dine, { color: t.accent }]}>Dine vagter: {status.dine}</Text>
       ) : null}
 
-      {visRaa ? (
-        <Animated.Text
-          entering={daempet ? undefined : FadeIn.duration(160)}
-          style={[s.raa, { color: t.dim, backgroundColor: t.cardAlt }]}
-        >
-          {status.raa.trim()}
-        </Animated.Text>
-      ) : null}
-    </Animated.View>
+      {status.mode ? <Text style={[s.mode, { color: t.faint }]}>{status.mode}</Text> : null}
+    </View>
   );
 }
 
-function Tal({
-  t, navn, v, fremhaev, daempet,
-}: { t: Theme; navn: string; v: string | number; fremhaev?: boolean; daempet: boolean }) {
+function Maaling({
+  t, navn, v, daempet, fremhaev,
+}: { t: Theme; navn: string; v: string | number; daempet: boolean; fremhaev?: boolean }) {
   return (
-    <View style={s.talBoks}>
-      <RulleTal vaerdi={v} daempet={daempet} stil={[s.talVaerdi, { color: fremhaev ? t.accent : t.text }]} />
-      <Text style={[s.talNavn, { color: t.faint }]}>{navn}</Text>
+    <View style={s.maaling}>
+      <RulleTal
+        vaerdi={v}
+        daempet={daempet}
+        stil={[s.maalingTal, { color: fremhaev ? t.accent : t.text }]}
+      />
+      <Text style={[s.maalingNavn, { color: t.faint }]}>{navn}</Text>
+    </View>
+  );
+}
+
+function Overskrift({ t, tekst, hoejre }: { t: Theme; tekst: string; hoejre?: string }) {
+  return (
+    <View style={s.overskrift}>
+      <Text style={[s.overskriftTekst, { color: t.text }]}>{tekst}</Text>
+      {hoejre ? <Text style={[s.overskriftHoejre, { color: t.faint }]}>{hoejre}</Text> : null}
     </View>
   );
 }
@@ -381,115 +371,72 @@ function Genvej({ t, tekst, tryk }: { t: Theme; tekst: string; tryk: () => void 
   return (
     <Pressable
       onPress={tryk}
-      style={({ pressed }) => [
-        s.genvej,
-        { borderColor: t.line, backgroundColor: pressed ? t.cardAlt : 'transparent' },
-      ]}
+      style={({ pressed }) => [s.genvej, { borderColor: t.line, opacity: pressed ? 0.5 : 1 }]}
     >
-      <Text style={[s.genvejTekst, { color: t.text }]}>{tekst}</Text>
+      <Text style={[s.genvejTekst, { color: t.dim }]}>{tekst}</Text>
     </Pressable>
   );
 }
 
-function Sygemelding({ t, daempet }: { t: Theme; daempet: boolean }) {
-  const [aaben, setAaben] = useState(false);
-
+function Fejllinje({ t, tekst }: { t: Theme; tekst: string }) {
   return (
-    <View style={[s.syg, { borderColor: t.line }]}>
-      <Pressable onPress={() => setAaben((v) => !v)} style={s.sygHoved}>
-        <Ionicons name="medkit-outline" size={17} color={t.dim} />
-        <Text style={[s.sygTitel, { color: t.text }]}>Sygemelding</Text>
-        <Text style={[s.sygTlf, { color: t.accent }]}>{SYGEMELDING.telefon}</Text>
-      </Pressable>
-
-      {aaben ? (
-        <Animated.View entering={daempet ? undefined : FadeIn.duration(180)}>
-          {SYGEMELDING.frister.map((f) => (
-            <View key={f.vagt} style={[s.frist, { borderTopColor: t.line }]}>
-              <Text style={[s.fristVagt, { color: t.dim }]}>{f.vagt}</Text>
-              <Text style={[s.fristTid, { color: t.text }]}>senest {f.senest}</Text>
-            </View>
-          ))}
-          <Pressable
-            onPress={() => Linking.openURL('tel:' + SYGEMELDING.telefon.replace(/\s/g, ''))}
-            style={[s.ring, { borderTopColor: t.line }]}
-          >
-            <Ionicons name="call-outline" size={15} color={t.accent} />
-            <Text style={[s.ringTekst, { color: t.accent }]}>Ring nu</Text>
-          </Pressable>
-        </Animated.View>
-      ) : null}
-    </View>
-  );
-}
-
-function Banner({ t, type, tekst }: { t: Theme; type: 'fejl' | 'advarsel'; tekst: string }) {
-  const bg = type === 'fejl' ? '#FCEBEB' : '#FAEEDA';
-  const fg = type === 'fejl' ? '#A32D2D' : '#854F0B';
-  return (
-    <Animated.View entering={FadeIn.duration(180)} style={[s.banner, { backgroundColor: bg }]}>
-      <Ionicons name={type === 'fejl' ? 'alert-circle' : 'information-circle'} size={17} color={fg} />
-      <Text style={[s.bannerTekst, { color: fg }]}>{tekst}</Text>
+    <Animated.View entering={FadeIn.duration(160)} style={s.fejl}>
+      <View style={[s.fejlStreg, { backgroundColor: '#E24B4A' }]} />
+      <Text style={[s.fejlTekst, { color: t.text }]}>{tekst}</Text>
     </Animated.View>
   );
 }
 
 const s = StyleSheet.create({
-  pad: { padding: 20, paddingBottom: 44 },
-  h1: { fontSize: 30, fontWeight: '700', letterSpacing: -0.6, marginBottom: 16 },
-  midt: { paddingVertical: 48, alignItems: 'center' },
+  pad: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 44 },
+  h1: { fontSize: 32, fontWeight: '700', letterSpacing: -0.9, marginBottom: 18 },
+  spinner: { marginTop: 60 },
 
-  kort: { borderRadius: 15, borderWidth: 1, padding: 16, marginBottom: 12 },
-  kortTitel: { fontSize: 17, fontWeight: '600', letterSpacing: -0.2 },
-  under: { fontSize: 13, marginTop: 3, lineHeight: 18 },
+  status: { paddingBottom: 20 },
+  statusTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statusNavn: { fontSize: 17, fontWeight: '600', flex: 1, letterSpacing: -0.2 },
+  statusTid: { fontSize: 12.5 },
 
-  statusTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  tilstand: { fontSize: 13.5, fontWeight: '600' },
+  tal: { flexDirection: 'row', marginTop: 12, gap: 30 },
+  maaling: {},
+  maalingTal: { fontSize: 24, fontWeight: '700', fontVariant: ['tabular-nums'], letterSpacing: -0.6 },
+  maalingNavn: { fontSize: 11.5, marginTop: 1 },
+  dine: { fontSize: 14, fontWeight: '500', marginTop: 12 },
+  mode: { fontSize: 12, marginTop: 12 },
 
-  talSpor: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingTop: 13, borderTopWidth: 1 },
-  talBoks: { flex: 1 },
-  talVaerdi: { fontSize: 21, fontWeight: '700', fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
-  talNavn: { fontSize: 11, marginTop: 2 },
-  skille: { width: 1, height: 26, marginHorizontal: 12 },
+  raaKnap: { paddingVertical: 6, marginBottom: 10 },
+  raaKnapTekst: { fontSize: 12.5 },
+  raa: { fontFamily: MONO, fontSize: 11, lineHeight: 16, marginBottom: 14 },
 
-  mode: { flexDirection: 'row', gap: 7, alignItems: 'center', marginTop: 12, padding: 9, borderRadius: 9 },
-  modeTekst: { fontSize: 12, flex: 1 },
-
-  raa: { fontFamily: MONO, fontSize: 11, lineHeight: 16, marginTop: 12, padding: 11, borderRadius: 9 },
-
-  link: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, marginBottom: 14 },
-  linkTekst: { fontSize: 13 },
-
-  genveje: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12, marginBottom: 6 },
-  genvej: { paddingHorizontal: 13, paddingVertical: 8, borderRadius: 9, borderWidth: 1 },
-  genvejTekst: { fontSize: 13, fontWeight: '500' },
-
-  stedTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 8 },
-  stedTael: { fontSize: 13, fontVariant: ['tabular-nums'] },
-
-  syg: { borderWidth: 1, borderRadius: 13, marginTop: 14, overflow: 'hidden' },
-  sygHoved: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 14 },
-  sygTitel: { fontSize: 15, fontWeight: '600', flex: 1 },
-  sygTlf: { fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  frist: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 14, borderTopWidth: 1 },
-  fristVagt: { fontSize: 13 },
-  fristTid: { fontSize: 13, fontWeight: '500', fontVariant: ['tabular-nums'] },
-  ring: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, borderTopWidth: 1 },
-  ringTekst: { fontSize: 14, fontWeight: '600' },
-
-  fod: { fontSize: 12, lineHeight: 18, marginTop: 18 },
-
-  banner: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 11, marginBottom: 14 },
-  bannerTekst: { fontSize: 13, flex: 1, lineHeight: 18 },
-
-  gemBjaelke: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 18,
-    borderTopWidth: 1,
+  overskrift: {
+    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
+    marginTop: 26, marginBottom: 12,
   },
-  gemTitel: { fontSize: 15, fontWeight: '600' },
-  gemUnder: { fontSize: 12.5, marginTop: 1, fontVariant: ['tabular-nums'] },
-  gemKnap: { minWidth: 92, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  gemKnapTekst: { fontSize: 16, fontWeight: '600' },
+  overskriftTekst: { fontSize: 20, fontWeight: '600', letterSpacing: -0.4 },
+  overskriftHoejre: { fontSize: 12.5, fontVariant: ['tabular-nums'] },
+
+  genveje: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  genvej: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  genvejTekst: { fontSize: 12.5 },
+
+  frist: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 },
+  fristVagt: { fontSize: 14 },
+  fristTid: { fontSize: 14, fontVariant: ['tabular-nums'] },
+  ring: { paddingVertical: 12 },
+  ringTekst: { fontSize: 15, fontWeight: '500' },
+
+  fod: { fontSize: 12, lineHeight: 18, marginTop: 22 },
+
+  fejl: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  fejlStreg: { width: 2, borderRadius: 1 },
+  fejlTekst: { fontSize: 13.5, flex: 1, lineHeight: 19 },
+
+  bjaelke: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 22, paddingTop: 14, paddingBottom: 18, borderTopWidth: 1,
+  },
+  bjaelkeTekst: { fontSize: 13, fontVariant: ['tabular-nums'] },
+  gem: { minWidth: 96, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  gemTekst: { fontSize: 15.5, fontWeight: '600' },
 });

@@ -92,6 +92,7 @@ export type Status = {
   matcher: number | null;
   taget: string | null;
   mode: string | null;
+  dine: string | null;
   forgammel: boolean;
 };
 
@@ -103,7 +104,8 @@ export function parseStatus(raa: string): Status {
   const tjekM = find(/Sidste tjek:\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/i);
   // Statusfilerne bruger tankestreg, ikke bindestreg. Begge accepteres.
   const vagterM = find(/Ledige vagter:\s*(\d+)\s*[-–—]\s*Matcher:\s*(\d+)/i);
-  const tagetM = find(/Taget i dag:\s*(\S+)/i);
+  const tagetM = find(/Taget i (?:dag|alt):\s*(\d+(?:\/\d+)?)/i);
+  const dineM = find(/Dine vagter:\s*(.+)/i);
   const modeM = find(/Mode:\s*(.+)/i);
 
   const sidsteTjek = tjekM ? new Date(`${tjekM[1]}T${tjekM[2]}`) : null;
@@ -118,6 +120,7 @@ export function parseStatus(raa: string): Status {
     matcher: vagterM ? parseInt(vagterM[2], 10) : null,
     taget: tagetM?.[1] ?? null,
     mode: modeM?.[1]?.trim() ?? null,
+    dine: dineM?.[1]?.trim() ?? null,
     // Scriptet skriver hvert minut. Over 5 minutter betyder noget haenger.
     forgammel: Boolean(sidsteTjek) && alder > 5 * 60_000,
   };
