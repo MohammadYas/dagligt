@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, ScrollView, StyleSheet, AccessibilityInfo,
+  View, Text, TextInput, Pressable, ScrollView, StyleSheet, AccessibilityInfo, Alert,
 } from 'react-native';
 import Animated, {
   FadeIn, FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring,
@@ -12,6 +12,7 @@ import { Theme } from '../theme';
 import { Type, Tal } from '../type';
 import { snappy, daempetSkift } from '../motion';
 import { rens, harDeepSeek } from '../deepseek';
+import Mikrofon from '../components/Mikrofon';
 
 type Props = { db: DB; update: (fn: (d: DB) => DB) => void; t: Theme };
 
@@ -69,9 +70,23 @@ export default function Fang({ db, update, t }: Props) {
     });
   }
 
+  /** Sletning er den eneste vej ud af indbakken, saa den skal bekraeftes. */
   function slet(id: string) {
+    const note = db.captures.find((c) => c.id === id);
+    const navn = note?.titel ?? note?.text ?? '';
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    update((d) => ({ ...d, captures: d.captures.filter((c) => c.id !== id) }));
+    Alert.alert(
+      'Slet noten?',
+      navn.length > 60 ? navn.slice(0, 60) + '…' : navn,
+      [
+        { text: 'Behold', style: 'cancel' },
+        {
+          text: 'Slet',
+          style: 'destructive',
+          onPress: () => update((d) => ({ ...d, captures: d.captures.filter((c) => c.id !== id) })),
+        },
+      ],
+    );
   }
 
   return (
@@ -89,18 +104,20 @@ export default function Fang({ db, update, t }: Props) {
           returnKeyType="done"
           multiline
         />
+        <Mikrofon paaTekst={setDraft} t={t} daempet={daempet} />
+
         <Pressable
-          style={[s.knap, { backgroundColor: t.accent }]}
+          style={[s.knap, { backgroundColor: draft.trim() ? t.accent : t.line }]}
           onPress={tilfoej}
           accessibilityLabel="Gem idé"
         >
-          <Ionicons name="arrow-up" size={20} color={t.bg} />
+          <Ionicons name="arrow-up" size={20} color={draft.trim() ? t.bg : t.faint} />
         </Pressable>
       </View>
 
       <Text style={[s.hjaelp, { color: t.faint }]}>
         {harDeepSeek
-          ? 'DeepSeek skriver den rent. Din egen ordlyd bliver gemt ved siden af.'
+          ? 'Skriv eller tal den ind. DeepSeek skriver den rent, og din egen ordlyd bliver gemt ved siden af.'
           : 'Ingen DeepSeek-nøgle i .env — noten gemmes som du skrev den.'}
       </Text>
 
@@ -195,7 +212,7 @@ function Note({
           ) : null}
 
           <Pressable onPress={slet} style={s.slet}>
-            <Text style={[s.sletTekst, { color: t.faint }]}>Slet</Text>
+            <Text style={[s.sletTekst, { color: '#E24B4A' }]}>Slet</Text>
           </Pressable>
         </Animated.View>
       ) : null}

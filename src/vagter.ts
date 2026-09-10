@@ -162,3 +162,58 @@ export function medKatalog(o: Oensker, katalog: string[]): Oensker {
 
   return { ...o, steder: [...iKatalog, ...kunIFil] };
 }
+
+/**
+ * Skriver oensker tilbage i filens EGEN form: hver kommentarlinje og
+ * overskrift bevares ord for ord, og kun datoer og stednavne skiftes ud.
+ * Sikrer at scriptet ser den fil det plejer, uanset hvad appen mener.
+ */
+export function serialiserMedSkabelon(raa: string, o: Oensker): string {
+  const linjer = raa.split(/\r?\n/);
+  const ud: string[] = [];
+
+  const kendteSteder = new Map(o.steder.map((s) => [s.navn, s.aktiv]));
+  const skrevne = new Set<string>();
+
+  let datoerSkrevet = false;
+  let sidsteStedIndeks = -1;
+
+  for (const linje of linjer) {
+    const trimmet = linje.trim();
+    const udkommenteret = trimmet.startsWith('#');
+    const indhold = udkommenteret ? trimmet.replace(/^#+\s*/, '') : trimmet;
+
+    if (indhold && DATO.test(indhold)) {
+      // Hele datoblokken skrives paa den foerste datolinjes plads.
+      if (!datoerSkrevet) {
+        for (const d of [...o.datoer].sort()) ud.push(d);
+        datoerSkrevet = true;
+      }
+      continue;
+    }
+
+    if (indhold && kendteSteder.has(indhold)) {
+      ud.push(kendteSteder.get(indhold) ? indhold : `# ${indhold}`);
+      skrevne.add(indhold);
+      sidsteStedIndeks = ud.length - 1;
+      continue;
+    }
+
+    ud.push(linje);
+  }
+
+  // Steder som filen ikke kendte i forvejen laegges efter det sidste den kendte.
+  const nye = o.steder.filter((s) => !skrevne.has(s.navn));
+  if (nye.length) {
+    const raekker = nye.map((s) => (s.aktiv ? s.navn : `# ${s.navn}`));
+    if (sidsteStedIndeks >= 0) ud.splice(sidsteStedIndeks + 1, 0, ...raekker);
+    else ud.push(...raekker);
+  }
+
+  // Har filen slet ingen datolinjer, skal de valgte stadig med.
+  if (!datoerSkrevet && o.datoer.length) {
+    ud.push('', ...[...o.datoer].sort());
+  }
+
+  return ud.join('\n').replace(/\n*$/, '\n');
+}

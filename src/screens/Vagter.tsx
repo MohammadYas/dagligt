@@ -8,8 +8,8 @@ import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
 import { hentFil, gemFil, DropboxFejl, harOpsaetning } from '../dropbox';
 import {
-  Script, FILER, Oensker, Status, parseOensker, serialiserOensker,
-  parseStatus, tilstand, siden, medKatalog,
+  Script, FILER, Oensker, Status, parseOensker,
+  parseStatus, tilstand, siden, medKatalog, serialiserMedSkabelon,
 } from '../vagter';
 import { alleNavne, SYGEMELDING } from '../steder';
 import { dayKey } from '../store';
@@ -143,9 +143,13 @@ export default function Vagter({ t }: { t: Theme }) {
     setGemmer(true);
     setFejl(null);
     try {
-      const tekst = serialiserOensker(oensker);
       const maal: Script[] = valg === 'begge' ? ['cas', 'torn'] : [valg];
-      for (const sc of maal) await gemFil(FILER[sc].oensker, tekst);
+      for (const sc of maal) {
+        // Hentes paa ny lige foer skrivning: filen bruges som skabelon, saa
+        // dens kommentarer bevares, og scriptets egne rettelser ikke tabes.
+        const nuvaerende = await hentFil(FILER[sc].oensker);
+        await gemFil(FILER[sc].oensker, serialiserMedSkabelon(nuvaerende, oensker));
+      }
       setAendret(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Gemt', 'Scripterne genlæser filen inden for 5 minutter.');
