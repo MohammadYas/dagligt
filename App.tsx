@@ -11,6 +11,7 @@ import Log from './src/screens/Log';
 import Fang from './src/screens/Fang';
 import Projekter from './src/screens/Projekter';
 import Vagter from './src/screens/Vagter';
+import Rute from './src/screens/Rute';
 
 const NAVN = 'mo';
 
@@ -18,6 +19,7 @@ const TABS = [
   { key: 'dag', label: 'Dag', icon: 'sunny-outline', on: 'sunny' },
   { key: 'log', label: 'Log', icon: 'stats-chart-outline', on: 'stats-chart' },
   { key: 'fang', label: 'Fang', icon: 'file-tray-outline', on: 'file-tray' },
+  { key: 'rute', label: 'Rute', icon: 'navigate-outline', on: 'navigate' },
   { key: 'vagter', label: 'Vagter', icon: 'pulse-outline', on: 'pulse' },
   { key: 'projekter', label: 'Projekter', icon: 'grid-outline', on: 'grid' },
 ] as const;
@@ -67,6 +69,8 @@ export default function App() {
             <Log db={db} update={update} t={t} />
           ) : tab === 'fang' ? (
             <Fang db={db} update={update} t={t} />
+          ) : tab === 'rute' ? (
+            <Rute t={t} />
           ) : tab === 'vagter' ? (
             <Vagter t={t} />
           ) : (
@@ -78,7 +82,7 @@ export default function App() {
               const aktiv = tab === x.key;
               return (
                 <Pressable key={x.key} style={s.tab} onPress={() => setTab(x.key)} accessibilityRole="button">
-                  <Ionicons name={(aktiv ? x.on : x.icon) as any} size={23} color={aktiv ? t.accent : t.faint} />
+                  <Ionicons name={(aktiv ? x.on : x.icon) as any} size={21} color={aktiv ? t.accent : t.faint} />
                   <Text style={[s.tabLabel, { color: aktiv ? t.accent : t.faint }]}>{x.label}</Text>
                 </Pressable>
               );
@@ -95,5 +99,5 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabbar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 8, paddingBottom: 6 },
   tab: { flex: 1, alignItems: 'center', gap: 3 },
-  tabLabel: { fontSize: 11, fontWeight: '500' },
+  tabLabel: { fontSize: 10, fontWeight: '500' },
 });

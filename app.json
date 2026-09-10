@@ -37,7 +37,8 @@
           "microphonePermission": "Bruges når du taler en idé ind i stedet for at skrive den.",
           "speechRecognitionPermission": "Bruges til at skrive det du siger om til tekst."
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

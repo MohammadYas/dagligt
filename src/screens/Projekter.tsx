@@ -10,6 +10,7 @@ import { PROJEKTER, Projekt } from '../projekter';
 import { Theme } from '../theme';
 import { Type } from '../type';
 import Puls from '../components/Puls';
+import Koder from '../components/Koder';
 
 // Paa web bliver WebView til en iframe, og begge sites saetter
 // X-Frame-Options: DENY. Der er kun én vej ind: en rigtig fane.
@@ -148,6 +149,8 @@ export default function Projekter({ t }: { t: Theme }) {
           ? 'Åbner inde i appen. Ikonet øverst til højre sender siden videre til Safari.'
           : 'Browseren kan ikke vise dem indlejret, så de åbner i en ny fane.'}
       </Animated.Text>
+
+      <Koder t={t} daempet={false} />
     </ScrollView>
   );
 }
