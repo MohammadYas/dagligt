@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { DB, load, save, empty } from './src/store';
 import { light, dark } from './src/theme';
-import { erWeb, harAdgang, sikkerBund } from './src/adgang';
+import { erWeb, harAdgang } from './src/adgang';
 import Laas from './src/components/Laas';
 import { opdaterWidget } from './src/widget';
 import Dag from './src/screens/Dag';
@@ -35,8 +35,6 @@ export default function App() {
   const [laast, setLaast] = useState(erWeb && !harAdgang());
 
   // Safari giver ingen sikker zone paa web, saa bundlinjen loeftes selv.
-  // Linjen naar helt ned; kun dens indhold loeftes fri af indikatoren.
-  const bundLoeft = sikkerBund();
 
   useEffect(() => {
     load().then((d) => {
@@ -86,7 +84,7 @@ export default function App() {
           <View
             style={[
               s.tabbar,
-              { borderTopColor: t.line, backgroundColor: t.card, paddingBottom: 6 + bundLoeft },
+              { borderTopColor: t.line, backgroundColor: t.card },
             ]}
           >
             {TABS.map((x) => {
@@ -109,7 +107,8 @@ export default function App() {
 const s = StyleSheet.create({
   root: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  tabbar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 8, paddingBottom: 6 },
+  // Linjen slutter ved skaermkanten; kun en hairline luft under teksten.
+  tabbar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 9, paddingBottom: 4 },
   tab: { flex: 1, alignItems: 'center', gap: 3 },
   tabLabel: { fontSize: 10, fontWeight: '500' },
 });
