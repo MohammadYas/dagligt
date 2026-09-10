@@ -107,8 +107,8 @@ export default function App() {
 const s = StyleSheet.create({
   root: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // Knap en millimeter luft under teksten, ikke mere.
-  tabbar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 10, paddingBottom: 3 },
+  // Teksten slutter praecis ved skaermkanten.
+  tabbar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 11, paddingBottom: 0 },
   tab: { flex: 1, alignItems: 'center', gap: 3 },
   tabLabel: { fontSize: 10, fontWeight: '500' },
 });

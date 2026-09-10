@@ -1,6 +1,6 @@
 [build]
   publish = "dist"
-  command = "npx expo export --platform web --output-dir dist && node scripts/pwa.mjs"
+  command = "node scripts/udgave.mjs && node scripts/pwa.mjs"
 
 [functions]
   directory = "netlify/functions"

@@ -25,8 +25,16 @@ const TRIN = [
   { ikon: 'checkmark-circle-outline', tekst: 'Tryk Tilføj. Så ligger den som en app' },
 ];
 
+const UDGAVE = process.env.EXPO_PUBLIC_UDGAVE ?? 'ukendt';
+
 export default function Hjemmeskaerm({ t }: { t: Theme }) {
-  if (!erWeb || koererSomApp()) return null;
+  if (!erWeb) return null;
+
+  if (koererSomApp()) {
+    // Ligger allerede paa hjemmeskaermen. Saa er stemplet det eneste
+    // der er vaerd at vise — det fortaeller om opdateringen er kommet ind.
+    return <Text style={[s.udgave, { color: t.faint }]}>Udgave {UDGAVE}</Text>;
+  }
 
   return (
     <View>
@@ -43,6 +51,8 @@ export default function Hjemmeskaerm({ t }: { t: Theme }) {
           <Text style={[s.tekst, { color: t.text }]}>{trin.tekst}</Text>
         </View>
       ))}
+
+      <Text style={[s.udgave, { color: t.faint }]}>Udgave {UDGAVE}</Text>
     </View>
   );
 }
@@ -53,4 +63,5 @@ const s = StyleSheet.create({
   trin: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, borderTopWidth: 1 },
   nummer: { ...Type.footnote, width: 12 },
   tekst: { ...Type.subhead, flex: 1 },
+  udgave: { ...Type.caption2, marginTop: 22 },
 });
