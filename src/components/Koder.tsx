@@ -22,6 +22,10 @@ try {
   Sikker = null;
 }
 
+// Uden Keychain (browseren) gemmes intet. Koder kan stadig laeses ud,
+// de bliver bare ikke husket til naeste gang.
+const kanGemme = Sikker !== null;
+
 async function laes(): Promise<Konto[]> {
   if (!Sikker) return [];
   try {
@@ -46,6 +50,7 @@ export default function Koder({ t, daempet }: { t: Theme; daempet: boolean }) {
   const [hemmelighed, setHemmelighed] = useState('');
   const [fejl, setFejl] = useState<string | null>(null);
   const [nu, setNu] = useState(Date.now());
+  const [straksKopieret, setStraksKopieret] = useState(false);
 
   useEffect(() => {
     laes().then(setKonti);
@@ -87,18 +92,27 @@ export default function Koder({ t, daempet }: { t: Theme; daempet: boolean }) {
     ]);
   }
 
-  if (!Sikker) {
-    return (
-      <View>
-        <Overskrift t={t} tilfoejer={false} skift={() => {}} vis={false} />
-        <Text style={[s.tom, { color: t.faint }]}>
-          Koder gemmes i telefonens Keychain og virker først i appen på telefonen.
-        </Text>
-      </View>
-    );
+  const sek = tilbage(nu);
+
+  // Koden vises saa snart det indtastede kan bruges — som en lommeregner.
+  let straks: string | null = null;
+  if (hemmelighed.trim()) {
+    const l = fraTekst(hemmelighed);
+    if (l) {
+      try {
+        straks = kode(l.hemmelighed, nu);
+      } catch {
+        straks = null;
+      }
+    }
   }
 
-  const sek = tilbage(nu);
+  async function kopierStraks(k: string) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Clipboard.setStringAsync(k);
+    setStraksKopieret(true);
+    setTimeout(() => setStraksKopieret(false), 1400);
+  }
 
   return (
     <View>
@@ -127,15 +141,36 @@ export default function Koder({ t, daempet }: { t: Theme; daempet: boolean }) {
             autoCorrect={false}
           />
           {fejl ? <Text style={[s.fejl, { color: t.fejl }]}>{fejl}</Text> : null}
-          <Pressable onPress={tilfoej} style={[s.gem, { backgroundColor: t.accent }]}>
-            <Text style={[s.gemTekst, { color: t.bg }]}>Tilføj</Text>
-          </Pressable>
+
+          {straks ? (
+            <Pressable onPress={() => kopierStraks(straks)} style={[s.straks, { borderTopColor: t.line }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.navn, { color: t.faint }]}>
+                  {straksKopieret ? 'kopieret' : 'tryk for at kopiere'}
+                </Text>
+                <Text style={[s.kode, { color: straksKopieret ? t.done : t.text }]}>
+                  {straks.slice(0, 3)} {straks.slice(3)}
+                </Text>
+              </View>
+              <Ur sek={sek} farve={sek <= 10 ? t.advarsel : t.accent} spor={t.line} daempet={daempet} />
+            </Pressable>
+          ) : null}
+
+          {kanGemme ? (
+            <Pressable onPress={tilfoej} style={[s.gem, { backgroundColor: t.accent }]}>
+              <Text style={[s.gemTekst, { color: t.bg }]}>
+                {straks ? 'Husk den' : 'Tilføj'}
+              </Text>
+            </Pressable>
+          ) : null}
         </Animated.View>
       ) : null}
 
       {konti.length === 0 && !tilfoejer ? (
         <Text style={[s.tom, { color: t.faint }]}>
-          Ingen koder endnu. Indsæt en hemmelighed, så viser den sig her.
+          {kanGemme
+            ? 'Ingen koder endnu. Tryk Tilføj og indsæt en hemmelighed.'
+            : 'Tryk Tilføj og indsæt en hemmelighed. Browseren kan vise koden, men ikke huske den.'}
         </Text>
       ) : null}
 
@@ -248,6 +283,7 @@ const s = StyleSheet.create({
   link: { ...Type.footnote },
 
   tilfoej: { marginBottom: 14 },
+  straks: { flexDirection: 'row', alignItems: 'center', gap: 14, borderTopWidth: 1, marginTop: 14, paddingTop: 14 },
   felt: { height: 46, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, ...Type.body },
   fejl: { ...Type.footnote, marginTop: 8 },
   gem: { height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginTop: 10 },

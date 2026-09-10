@@ -7,7 +7,6 @@ import { DB, load, save, empty } from './src/store';
 import { light, dark } from './src/theme';
 import { opdaterWidget } from './src/widget';
 import Dag from './src/screens/Dag';
-import Log from './src/screens/Log';
 import Fang from './src/screens/Fang';
 import Projekter from './src/screens/Projekter';
 import Vagter from './src/screens/Vagter';
@@ -17,7 +16,6 @@ const NAVN = 'mo';
 
 const TABS = [
   { key: 'dag', label: 'Dag', icon: 'sunny-outline', on: 'sunny' },
-  { key: 'log', label: 'Log', icon: 'stats-chart-outline', on: 'stats-chart' },
   { key: 'fang', label: 'Fang', icon: 'file-tray-outline', on: 'file-tray' },
   { key: 'rute', label: 'Rute', icon: 'navigate-outline', on: 'navigate' },
   { key: 'vagter', label: 'Vagter', icon: 'pulse-outline', on: 'pulse' },
@@ -65,8 +63,6 @@ export default function App() {
             </View>
           ) : tab === 'dag' ? (
             <Dag db={db} update={update} t={t} navn={NAVN} />
-          ) : tab === 'log' ? (
-            <Log db={db} update={update} t={t} />
           ) : tab === 'fang' ? (
             <Fang db={db} update={update} t={t} />
           ) : tab === 'rute' ? (

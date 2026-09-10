@@ -248,7 +248,16 @@ afsnit('DAWA');
   ok('finder adresse', f.length > 0);
   ok('koordinater med', typeof f[0]?.lon === 'number' && typeof f[0]?.lat === 'number');
   ok('etiket er ren', f[0]?.tekst === 'Hashøjvej 7, 4200 Slagelse', f[0]?.tekst);
-  ok('for kort soegning giver intet', (await soeg('Ha')).length === 0);
+
+  const landsby = await soeg('Havrebjergvej 1');
+  ok('landsbynavnet er med', landsby[0]?.bynavn === 'Havrebjerg', String(landsby[0]?.tekst));
+
+  const dalmose = await soeg('Nyvej 1, Dalmose');
+  ok('Dalmose lander i Slagelse Kommune', dalmose[0]?.post?.includes('4261') === true, String(dalmose[0]?.tekst));
+  ok('lokale adresser er ikke udenbys', dalmose[0]?.udenbys === false);
+
+  const rude = await soeg('Østervej 4, Rude');
+  ok('Rude er 4243, ikke Holte', rude[0]?.post?.includes('4243') === true, String(rude[0]?.tekst));
 }
 
 afsnit('Ruteberegning');

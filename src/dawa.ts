@@ -1,6 +1,14 @@
 // Danmarks Adressers Web API. Offentligt, ingen noegle.
 const BASIS = 'https://api.dataforsyningen.dk';
 
+/**
+ * Slagelse Kommune. Alle distrikterne — Slagelse, Korsoer, Skaelskoer og
+ * landsbyerne imellem — ligger i den samme kommune, saa ét filter daekker
+ * hele arbejdsomraadet. Uden det giver "Dalmose" adresser paa Fejoe og
+ * "Rude" adresser i Holte.
+ */
+export const SLAGELSE = '0330';
+
 export type Forslag = {
   /** Hele adressen som den skal staa paa listen. */
   tekst: string;
@@ -8,12 +16,17 @@ export type Forslag = {
   kort: string;
   /** Etage og doer, naar adressen har dem. */
   detalje: string | null;
+  /** Landsbyen, fx Havrebjerg eller Kirke Stillinge. Ofte det navn stedet kendes paa. */
+  bynavn: string | null;
+  /** Postnummer og postdistrikt. */
+  post: string;
+  /** Sandt naar adressen ligger uden for Slagelse Kommune. */
+  udenbys: boolean;
   lon: number;
   lat: number;
 };
 
 type DawaAdresse = {
-  id?: string;
   vejnavn?: string;
   husnr?: string;
   etage?: string | null;
@@ -21,6 +34,7 @@ type DawaAdresse = {
   supplerendebynavn?: string | null;
   postnr?: string;
   postnrnavn?: string;
+  kommunekode?: string;
   x?: number;
   y?: number;
 };
@@ -34,39 +48,64 @@ function byg(a: DawaAdresse): Forslag | null {
   const kort = `${a.vejnavn} ${a.husnr}`;
   const dele = [a.etage ? `${a.etage}.` : null, a['dør'] ?? null].filter(Boolean);
   const detalje = dele.length ? dele.join(' ') : null;
-  const by = [a.postnr, a.postnrnavn].filter(Boolean).join(' ');
+  const bynavn = a.supplerendebynavn ?? null;
+  const post = [a.postnr, a.postnrnavn].filter(Boolean).join(' ');
 
   return {
-    tekst: [kort, detalje, by].filter(Boolean).join(', '),
+    // Landsbynavnet med, praecis som DAWA selv skriver adressen.
+    tekst: [kort, detalje, bynavn, post].filter(Boolean).join(', '),
     kort,
     detalje,
+    bynavn,
+    post,
+    udenbys: a.kommunekode !== SLAGELSE,
     lon,
     lat,
   };
 }
 
+async function hent(q: string, kommune: string | null, antal: number, signal?: AbortSignal) {
+  const url =
+    `${BASIS}/adresser/autocomplete?q=${encodeURIComponent(q)}` +
+    (kommune ? `&kommunekode=${kommune}` : '') +
+    `&per_side=${antal}`;
+
+  const svar = await fetch(url, { signal });
+  if (!svar.ok) throw new Error(`Adresseopslag svarede ${svar.status}.`);
+  return (await svar.json()) as { adresse?: DawaAdresse }[];
+}
+
 /**
- * Slaar adresser op mens der skrives. Etiketten bygges af DAWA's egne felter,
- * ikke af tekststrengen — den blander etage og husnummer sammen.
+ * Slaar adresser op mens der skrives. Slagelse Kommune kommer foerst;
+ * resten af landet fyldes paa bagefter, saa en adresse uden for kommunen
+ * stadig kan findes uden at fylde listen til hverdag.
  */
 export async function soeg(q: string, signal?: AbortSignal): Promise<Forslag[]> {
   const raa = q.trim();
-  if (raa.length < 3) return [];
+  if (raa.length < 2) return [];
 
-  const url = `${BASIS}/adresser/autocomplete?q=${encodeURIComponent(raa)}&per_side=10`;
-  const svar = await fetch(url, { signal });
-  if (!svar.ok) throw new Error(`Adresseopslag svarede ${svar.status}.`);
-
-  const data = (await svar.json()) as { adresse?: DawaAdresse }[];
   const ud: Forslag[] = [];
   const set = new Set<string>();
 
-  for (const r of data) {
-    const f = r.adresse ? byg(r.adresse) : null;
-    if (!f || set.has(f.tekst)) continue;
-    set.add(f.tekst);
-    ud.push(f);
+  function saml(raekker: { adresse?: DawaAdresse }[]) {
+    for (const r of raekker) {
+      const f = r.adresse ? byg(r.adresse) : null;
+      if (!f || set.has(f.tekst)) continue;
+      set.add(f.tekst);
+      ud.push(f);
+    }
   }
 
-  return ud.slice(0, 8);
+  saml(await hent(raa, SLAGELSE, 20, signal));
+
+  // Kun naar kommunen ikke kunne svare ordentligt, spoerges hele landet.
+  if (ud.length < 5) {
+    try {
+      saml(await hent(raa, null, 12, signal));
+    } catch {
+      // Det lokale svar staar ved magt.
+    }
+  }
+
+  return ud.slice(0, 12);
 }

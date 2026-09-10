@@ -138,7 +138,8 @@ export default function Rute({ t }: { t: Theme }) {
                     {f.detalje ? <Text style={{ color: t.dim }}>{'  ' + f.detalje}</Text> : null}
                   </Text>
                   <Text style={[s.forslagBy, { color: t.faint }]}>
-                    {f.tekst.split(', ').slice(-1)[0]}
+                    {[f.bynavn, f.post].filter(Boolean).join(' · ')}
+                    {f.udenbys ? '  uden for kommunen' : ''}
                   </Text>
                 </View>
                 <Ionicons name="add" size={19} color={t.accent} />
