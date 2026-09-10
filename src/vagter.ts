@@ -6,7 +6,13 @@ export const FILER: Record<Script, { oensker: string; status: string; navn: stri
 };
 
 export type Sted = { navn: string; aktiv: boolean };
-export type Oensker = { datoer: string[]; steder: Sted[] };
+export type Oensker = {
+  /** Datoer der er slaaet til. */
+  datoer: string[];
+  /** Datoer der har vaeret valgt, men er slaaet fra. Skrives som "# dato". */
+  fravalgte: string[];
+  steder: Sted[];
+};
 
 const DATO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -16,6 +22,7 @@ const DATO = /^\d{4}-\d{2}-\d{2}$/;
  */
 export function parseOensker(raa: string): Oensker {
   const datoer: string[] = [];
+  const fravalgte: string[] = [];
   const steder: Sted[] = [];
   let iStederSektion = false;
 
@@ -33,8 +40,12 @@ export function parseOensker(raa: string): Oensker {
     if (!indhold) continue;
 
     if (DATO.test(indhold)) {
-      // En udkommenteret dato er fravalgt og skal ikke med.
-      if (!udkommenteret && !datoer.includes(indhold)) datoer.push(indhold);
+      // En udkommenteret dato er fravalgt, men bliver husket.
+      if (udkommenteret) {
+        if (!fravalgte.includes(indhold)) fravalgte.push(indhold);
+      } else if (!datoer.includes(indhold)) {
+        datoer.push(indhold);
+      }
       continue;
     }
 
@@ -49,7 +60,34 @@ export function parseOensker(raa: string): Oensker {
   }
 
   datoer.sort();
-  return { datoer, steder };
+  fravalgte.sort();
+  return { datoer, fravalgte, steder };
+}
+
+/**
+ * Skifter en dato til eller fra uden at glemme den. En fravalgt dato
+ * flytter til fravalgte-listen, saa den stadig staar i filen som "# dato".
+ */
+export function skiftDato(o: Oensker, dato: string): Oensker {
+  const til = o.datoer.includes(dato);
+  return til
+    ? {
+        ...o,
+        datoer: o.datoer.filter((d) => d !== dato),
+        fravalgte: o.fravalgte.includes(dato) ? o.fravalgte : [...o.fravalgte, dato].sort(),
+      }
+    : {
+        ...o,
+        datoer: [...o.datoer, dato].sort(),
+        fravalgte: o.fravalgte.filter((d) => d !== dato),
+      };
+}
+
+/** Saetter hele listen af valgte dage. Alt der falder ud bliver husket. */
+export function saetDatoer(o: Oensker, nye: string[]): Oensker {
+  const sat = new Set(nye);
+  const husk = new Set([...o.fravalgte, ...o.datoer].filter((d) => !sat.has(d)));
+  return { ...o, datoer: [...sat].sort(), fravalgte: [...husk].sort() };
 }
 
 /** Skelner stednavne fra forklarende kommentarer i steder-sektionen. */
@@ -96,6 +134,12 @@ export type Status = {
   forgammel: boolean;
 };
 
+/**
+ * Scripterne skriver status hvert minut. Tre manglende indmeldinger
+ * er nok til at kalde det tavst — én forsinket runde er normalt.
+ */
+export const TAVS_EFTER_MS = 3 * 60_000;
+
 export function parseStatus(raa: string): Status {
   const find = (m: RegExp) => raa.match(m);
 
@@ -121,8 +165,7 @@ export function parseStatus(raa: string): Status {
     taget: tagetM?.[1] ?? null,
     mode: modeM?.[1]?.trim() ?? null,
     dine: dineM?.[1]?.trim() ?? null,
-    // Scriptet skriver hvert minut. Over 5 minutter betyder noget haenger.
-    forgammel: Boolean(sidsteTjek) && alder > 5 * 60_000,
+    forgammel: Boolean(sidsteTjek) && alder > TAVS_EFTER_MS,
   };
 }
 
@@ -184,9 +227,13 @@ export function serialiserMedSkabelon(raa: string, o: Oensker): string {
     const indhold = udkommenteret ? trimmet.replace(/^#+\s*/, '') : trimmet;
 
     if (indhold && DATO.test(indhold)) {
-      // Hele datoblokken skrives paa den foerste datolinjes plads.
+      // Hele datoblokken skrives paa den foerste datolinjes plads:
+      // valgte som de er, fravalgte bag et # saa de ikke gaar tabt.
       if (!datoerSkrevet) {
         for (const d of [...o.datoer].sort()) ud.push(d);
+        for (const d of [...o.fravalgte].sort()) {
+          if (!o.datoer.includes(d)) ud.push('# ' + d);
+        }
         datoerSkrevet = true;
       }
       continue;
@@ -211,8 +258,8 @@ export function serialiserMedSkabelon(raa: string, o: Oensker): string {
   }
 
   // Har filen slet ingen datolinjer, skal de valgte stadig med.
-  if (!datoerSkrevet && o.datoer.length) {
-    ud.push('', ...[...o.datoer].sort());
+  if (!datoerSkrevet && (o.datoer.length || o.fravalgte.length)) {
+    ud.push('', ...[...o.datoer].sort(), ...[...o.fravalgte].sort().map((d) => '# ' + d));
   }
 
   return ud.join('\n').replace(/\n*$/, '\n');

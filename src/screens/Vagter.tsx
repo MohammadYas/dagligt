@@ -10,6 +10,7 @@ import { hentFil, gemFil, DropboxFejl, harOpsaetning } from '../dropbox';
 import {
   Script, FILER, Oensker, Status, parseOensker,
   parseStatus, tilstand, siden, medKatalog, serialiserMedSkabelon,
+  skiftDato as skiftDatoIOensker, saetDatoer as saetDatoerIOensker,
 } from '../vagter';
 import { alleNavne, SYGEMELDING } from '../steder';
 import { dayKey } from '../store';
@@ -94,21 +95,12 @@ export default function Vagter({ t }: { t: Theme }) {
   }, [hent]);
 
   function skiftDato(dato: string) {
-    setOensker((o) =>
-      o
-        ? {
-            ...o,
-            datoer: o.datoer.includes(dato)
-              ? o.datoer.filter((d) => d !== dato)
-              : [...o.datoer, dato].sort(),
-          }
-        : o,
-    );
+    setOensker((o) => (o ? skiftDatoIOensker(o, dato) : o));
     setAendret(true);
   }
 
   function saetDatoer(datoer: string[]) {
-    setOensker((o) => (o ? { ...o, datoer } : o));
+    setOensker((o) => (o ? saetDatoerIOensker(o, datoer) : o));
     setAendret(true);
   }
 

@@ -1,38 +1,89 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, Platform, Linking,
+} from 'react-native';
 import { WebView } from 'react-native-webview';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { PROJEKTER, Projekt } from '../projekter';
 import { Theme } from '../theme';
+import { Type } from '../type';
+
+// Paa web bliver WebView til en iframe, og begge sites saetter
+// X-Frame-Options: DENY. Der er kun én vej ind: en rigtig fane.
+const KAN_INDLEJRE = Platform.OS !== 'web';
 
 export default function Projekter({ t }: { t: Theme }) {
   const [aaben, setAaben] = useState<Projekt | null>(null);
+  const [fejlede, setFejlede] = useState(false);
+
+  function aabnUdenfor(p: Projekt) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Linking.openURL(p.url);
+  }
+
+  function aabn(p: Projekt) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!KAN_INDLEJRE) {
+      Linking.openURL(p.url);
+      return;
+    }
+    setFejlede(false);
+    setAaben(p);
+  }
 
   if (aaben) {
     return (
       <View style={{ flex: 1 }}>
-        <View style={[s.bar, { borderBottomColor: t.line, backgroundColor: t.card }]}>
-          <Pressable onPress={() => setAaben(null)} style={s.back} accessibilityLabel="Tilbage">
-            <Ionicons name="chevron-back" size={22} color={t.accent} />
-            <Text style={[s.backText, { color: t.accent }]}>Projekter</Text>
+        <View style={[s.bar, { borderBottomColor: t.line }]}>
+          <Pressable onPress={() => setAaben(null)} style={s.tilbage} hitSlop={8}>
+            <Ionicons name="chevron-back" size={20} color={t.accent} />
+            <Text style={[s.tilbageTekst, { color: t.accent }]}>Projekter</Text>
           </Pressable>
-          <Text style={[s.barTitle, { color: t.text }]} numberOfLines={1}>
+
+          <Text style={[s.barTitel, { color: t.text }]} numberOfLines={1}>
             {aaben.navn}
           </Text>
+
+          <Pressable onPress={() => aabnUdenfor(aaben)} hitSlop={8} accessibilityLabel="Åbn i Safari">
+            <Ionicons name="open-outline" size={19} color={t.accent} />
+          </Pressable>
         </View>
-        <WebView
-          source={{ uri: aaben.url }}
-          style={{ flex: 1, backgroundColor: t.bg }}
-          startInLoadingState
-          sharedCookiesEnabled
-          domStorageEnabled
-          allowsBackForwardNavigationGestures
-          renderLoading={() => (
-            <View style={[s.center, { backgroundColor: t.bg }]}>
-              <ActivityIndicator color={t.accent} />
-            </View>
-          )}
-        />
+
+        {fejlede ? (
+          <View style={s.midt}>
+            <Text style={[s.fejlTitel, { color: t.text }]}>Siden ville ikke indlæses</Text>
+            <Text style={[s.fejlTekst, { color: t.dim }]}>
+              {aaben.navn} tillader måske ikke visning inde i en app. Åbn den i Safari — din
+              login-session følger med.
+            </Text>
+            <Pressable
+              onPress={() => aabnUdenfor(aaben)}
+              style={[s.knap, { backgroundColor: t.accent }]}
+            >
+              <Text style={[s.knapTekst, { color: t.bg }]}>Åbn i Safari</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <WebView
+            source={{ uri: aaben.url }}
+            style={{ flex: 1, backgroundColor: t.bg }}
+            startInLoadingState
+            sharedCookiesEnabled
+            domStorageEnabled
+            allowsBackForwardNavigationGestures
+            onError={() => setFejlede(true)}
+            onHttpError={(e) => {
+              if (e.nativeEvent.statusCode >= 400) setFejlede(true);
+            }}
+            renderLoading={() => (
+              <View style={[s.indlaeser, { backgroundColor: t.bg }]}>
+                <ActivityIndicator color={t.accent} />
+              </View>
+            )}
+          />
+        )}
       </View>
     );
   }
@@ -41,55 +92,58 @@ export default function Projekter({ t }: { t: Theme }) {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={s.pad}>
       <Text style={[s.h1, { color: t.text }]}>Projekter</Text>
 
-      {PROJEKTER.map((p) => {
-        const klar = p.url.length > 0;
-        return (
+      {PROJEKTER.map((p, i) => (
+        <Animated.View key={p.id} entering={FadeInDown.delay(i * 60).duration(280)}>
           <Pressable
-            key={p.id}
-            disabled={!klar}
-            onPress={() => setAaben(p)}
-            style={[s.kort, { backgroundColor: t.card, borderColor: t.line, opacity: klar ? 1 : 0.55 }]}
+            onPress={() => aabn(p)}
+            style={({ pressed }) => [s.raekke, { borderTopColor: t.line, opacity: pressed ? 0.55 : 1 }]}
+            accessibilityRole="link"
+            accessibilityLabel={p.navn + ', ' + p.beskrivelse}
           >
-            <View style={[s.ikon, { backgroundColor: t.accentBg }]}>
-              <Ionicons name={p.ikon as any} size={20} color={t.accent} />
-            </View>
             <View style={{ flex: 1 }}>
               <Text style={[s.navn, { color: t.text }]}>{p.navn}</Text>
-              <Text style={[s.beskrivelse, { color: t.dim }]}>
-                {klar ? p.beskrivelse : 'Mangler adresse'}
-              </Text>
+              <Text style={[s.under, { color: t.faint }]}>{p.beskrivelse}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={t.faint} />
+            <Ionicons
+              name={KAN_INDLEJRE ? 'chevron-forward' : 'open-outline'}
+              size={17}
+              color={t.faint}
+            />
           </Pressable>
-        );
-      })}
+        </Animated.View>
+      ))}
 
-      <Text style={[s.hint, { color: t.faint }]}>
-        Adresser sættes i src/projekter.ts. Uden adresse kan et projekt ikke åbnes.
-      </Text>
+      <Animated.Text entering={FadeIn.delay(200)} style={[s.fod, { color: t.faint }]}>
+        {KAN_INDLEJRE
+          ? 'Åbner inde i appen. Ikonet øverst til højre sender siden videre til Safari.'
+          : 'Browseren kan ikke vise dem indlejret, så de åbner i en ny fane.'}
+      </Animated.Text>
     </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
-  pad: { padding: 20, paddingBottom: 40 },
-  h1: { fontSize: 28, fontWeight: '600', marginBottom: 18 },
-  kort: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 12,
+  pad: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 44 },
+  h1: { ...Type.largeTitle, marginBottom: 14 },
+
+  raekke: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 17, borderTopWidth: 1 },
+  navn: { ...Type.callout, fontWeight: '600' },
+  under: { ...Type.caption1, marginTop: 2 },
+  fod: { ...Type.caption1, marginTop: 20 },
+
+  bar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: 1,
   },
-  ikon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  navn: { fontSize: 16, fontWeight: '500' },
-  beskrivelse: { fontSize: 13, marginTop: 2 },
-  hint: { fontSize: 12, marginTop: 10, lineHeight: 18 },
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1 },
-  back: { flexDirection: 'row', alignItems: 'center' },
-  backText: { fontSize: 16 },
-  barTitle: { fontSize: 15, fontWeight: '500', flex: 1, textAlign: 'right' },
-  center: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  tilbage: { flexDirection: 'row', alignItems: 'center' },
+  tilbageTekst: { ...Type.body },
+  barTitel: { ...Type.subhead, fontWeight: '600', flex: 1, textAlign: 'center' },
+
+  indlaeser: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+
+  midt: { flex: 1, alignItems: 'flex-start', justifyContent: 'center', paddingHorizontal: 28 },
+  fejlTitel: { ...Type.title3, marginBottom: 8 },
+  fejlTekst: { ...Type.subhead, marginBottom: 22 },
+  knap: { height: 46, borderRadius: 23, paddingHorizontal: 26, alignItems: 'center', justifyContent: 'center' },
+  knapTekst: { ...Type.callout, fontWeight: '600' },
 });
