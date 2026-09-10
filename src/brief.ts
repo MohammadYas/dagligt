@@ -2,7 +2,7 @@ import { DB, dayKey, longDate, greeting, streak } from './store';
 import { hentFil } from './dropbox';
 import { FILER, parseOensker, parseStatus, tilstand, Script } from './vagter';
 
-const NOEGLE = process.env.EXPO_PUBLIC_DEEPSEEK_KEY ?? '';
+import { hentKonfig } from './konfig';
 
 export type Kilder = {
   dato: string;
@@ -73,7 +73,8 @@ const SYSTEM = [
 
 /** Beder DeepSeek skrive dagens besked ud fra kilderne. */
 export async function skrivBrief(k: Kilder): Promise<string> {
-  if (!NOEGLE) throw new Error('Ingen DeepSeek-nøgle i .env.');
+  const NOEGLE = (await hentKonfig()).deepseek;
+  if (!NOEGLE) throw new Error('DeepSeek er ikke sat op. Indtast nøglen under Projekter.');
 
   const data = {
     hilsen: k.hilsen,

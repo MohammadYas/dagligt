@@ -1,6 +1,9 @@
-const NOEGLE = process.env.EXPO_PUBLIC_DEEPSEEK_KEY ?? '';
+import { hentKonfig } from './konfig';
 
-export const harDeepSeek = NOEGLE.length > 0;
+/** Kaldes af skaermene for at vide om rensningen kan tilbydes. */
+export async function kanRense(): Promise<boolean> {
+  return (await hentKonfig()).deepseek.length > 0;
+}
 
 export type Renset = { titel: string; tekst: string };
 
@@ -14,7 +17,8 @@ const SYSTEM = [
 
 /** Sender den raa tanke gennem DeepSeek og faar en titel og en ren tekst tilbage. */
 export async function rens(raa: string): Promise<Renset> {
-  if (!harDeepSeek) throw new Error('Ingen DeepSeek-nøgle i .env.');
+  const NOEGLE = (await hentKonfig()).deepseek;
+  if (!NOEGLE) throw new Error('DeepSeek er ikke sat op. Indtast nøglen under Projekter.');
 
   const svar = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',

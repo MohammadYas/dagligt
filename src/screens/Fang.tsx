@@ -11,7 +11,7 @@ import { DB, Capture, uid } from '../store';
 import { Theme } from '../theme';
 import { Type, Tal } from '../type';
 import { snappy, daempetSkift } from '../motion';
-import { rens, harDeepSeek } from '../deepseek';
+import { rens, kanRense } from '../deepseek';
 import Mikrofon from '../components/Mikrofon';
 
 type Props = { db: DB; update: (fn: (d: DB) => DB) => void; t: Theme };
@@ -20,9 +20,11 @@ export default function Fang({ db, update, t }: Props) {
   const [draft, setDraft] = useState('');
   const [aabne, setAabne] = useState<Set<string>>(new Set());
   const [daempet, setDaempet] = useState(false);
+  const [harDeepSeek, setHarDeepSeek] = useState(false);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setDaempet);
+    kanRense().then(setHarDeepSeek);
   }, []);
 
   const items = [...db.captures].sort((a, b) => b.ts - a.ts);
@@ -117,7 +119,7 @@ export default function Fang({ db, update, t }: Props) {
       <Text style={[s.hjaelp, { color: t.faint }]}>
         {harDeepSeek
           ? 'Skriv eller tal den ind. DeepSeek skriver den rent, og din egen ordlyd bliver gemt ved siden af.'
-          : 'Ingen DeepSeek-nøgle i .env — noten gemmes som du skrev den.'}
+          : 'Uden DeepSeek-nøgle gemmes noten som du skrev den. Nøglen sættes under Projekter.'}
       </Text>
 
       {items.length === 0 ? (

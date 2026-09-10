@@ -1,9 +1,6 @@
 // Raa HTTP mod Dropbox. Ingen SDK.
 
-const TOKEN = process.env.EXPO_PUBLIC_DROPBOX_TOKEN ?? '';
-const APP_KEY = process.env.EXPO_PUBLIC_DROPBOX_APP_KEY ?? '';
-const APP_SECRET = process.env.EXPO_PUBLIC_DROPBOX_APP_SECRET ?? '';
-const REFRESH = process.env.EXPO_PUBLIC_DROPBOX_REFRESH_TOKEN ?? '';
+import { hentKonfig, harDropbox } from './konfig';
 
 export class DropboxFejl extends Error {
   constructor(public besked: string, public status: number) {
@@ -15,6 +12,12 @@ export class DropboxFejl extends Error {
 let cache: { vaerdi: string; udloeber: number } | null = null;
 
 async function adgangstoken(): Promise<string> {
+  const k = await hentKonfig();
+  const TOKEN = k.dropboxToken;
+  const APP_KEY = k.dropboxAppKey;
+  const APP_SECRET = k.dropboxAppSecret;
+  const REFRESH = k.dropboxRefresh;
+
   if (REFRESH && APP_KEY && APP_SECRET) {
     if (cache && Date.now() < cache.udloeber) return cache.vaerdi;
 
@@ -42,7 +45,7 @@ async function adgangstoken(): Promise<string> {
   }
 
   if (!TOKEN) {
-    throw new DropboxFejl('Ingen Dropbox-token opsat. Udfyld .env i projektet.', 0);
+    throw new DropboxFejl('Dropbox er ikke sat op. Indtast nøglerne under Projekter.', 0);
   }
   return TOKEN;
 }
@@ -94,4 +97,6 @@ export async function gemFil(sti: string, indhold: string): Promise<void> {
   if (!svar.ok) throw oversaetFejl(svar.status, await svar.text());
 }
 
-export const harOpsaetning = Boolean(TOKEN || (REFRESH && APP_KEY && APP_SECRET));
+export async function erOpsat(): Promise<boolean> {
+  return harDropbox(await hentKonfig());
+}

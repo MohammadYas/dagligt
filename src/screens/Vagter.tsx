@@ -6,7 +6,7 @@ import {
 import Animated, { FadeIn, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
-import { hentFil, gemFil, DropboxFejl, harOpsaetning } from '../dropbox';
+import { hentFil, gemFil, DropboxFejl, erOpsat } from '../dropbox';
 import {
   Script, FILER, Oensker, Status, parseOensker,
   parseStatus, tilstand, siden, medKatalog, serialiserMedSkabelon,
@@ -43,9 +43,11 @@ export default function Vagter({ t }: { t: Theme }) {
   const [gemt, setGemt] = useState(false);
   const [slag, setSlag] = useState(0);
   const [daempet, setDaempet] = useState(false);
+  const [opsat, setOpsat] = useState(true);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setDaempet);
+    erOpsat().then(setOpsat);
     const lyt = AccessibilityInfo.addEventListener('reduceMotionChanged', setDaempet);
     return () => lyt.remove();
   }, []);
@@ -171,7 +173,9 @@ export default function Vagter({ t }: { t: Theme }) {
 
         <Text style={[s.h1, { color: t.faint }]}>Auto Vagt</Text>
 
-        {!harOpsaetning ? <Fejllinje t={t} tekst="Ingen Dropbox-adgang. Udfyld .env." /> : null}
+        {!opsat ? (
+          <Fejllinje t={t} tekst="Dropbox er ikke sat op. Indtast nøglerne under Projekter." />
+        ) : null}
         {fejl ? <Fejllinje t={t} tekst={fejl} /> : null}
 
         {henter ? (

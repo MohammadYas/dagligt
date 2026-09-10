@@ -1,6 +1,6 @@
 /**
  * Gennemgang af hele appens logik og de tjenester den afhaenger af.
- * Koeres med: node --experimental-strip-types tests/alt.mts
+ * Koeres med: npx tsx tests/alt.mts
  */
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
@@ -11,17 +11,17 @@ for (const linje of env0.split(/\r?\n/)) {
   if (i > 0) process.env[linje.slice(0, i).trim()] = linje.slice(i + 1).trim();
 }
 
-const R = 'file:///C:/Users/mo/Desktop/dagligapp/src/';
+const R = '../src/';
 const {
   parseOensker, serialiserMedSkabelon, medKatalog, parseStatus, tilstand,
   skiftDato, saetDatoer, siden, TAVS_EFTER_MS, FILER,
-} = await import(R + 'vagter.ts');
-const { alleNavne, GRUPPER, gruppeFor } = await import(R + 'steder.ts');
-const { dayKey, longDate, greeting, streak, lastDays } = await import(R + 'store.ts');
-const { kode, base32, fraTekst, tilbage } = await import(R + 'totp.ts');
-const { soeg } = await import(R + 'dawa.ts');
-const { planlaeg, kortLinks, tid, afstand } = await import(R + 'rute.ts');
-const { rens } = await import(R + 'deepseek.ts');
+} = await import(R + 'vagter');
+const { alleNavne, GRUPPER, gruppeFor } = await import(R + 'steder');
+const { dayKey, longDate, greeting, streak, lastDays } = await import(R + 'store');
+const { kode, base32, fraTekst, tilbage } = await import(R + 'totp');
+const { soeg } = await import(R + 'dawa');
+const { planlaeg, kortLinks, tid, afstand } = await import(R + 'rute');
+const { rens } = await import(R + 'deepseek');
 
 let bestaaet = 0;
 let fejlet = 0;
