@@ -10,6 +10,7 @@ import Dag from './src/screens/Dag';
 import Log from './src/screens/Log';
 import Fang from './src/screens/Fang';
 import Projekter from './src/screens/Projekter';
+import Vagter from './src/screens/Vagter';
 
 const NAVN = 'mo';
 
@@ -17,6 +18,7 @@ const TABS = [
   { key: 'dag', label: 'Dag', icon: 'sunny-outline', on: 'sunny' },
   { key: 'log', label: 'Log', icon: 'stats-chart-outline', on: 'stats-chart' },
   { key: 'fang', label: 'Fang', icon: 'file-tray-outline', on: 'file-tray' },
+  { key: 'vagter', label: 'Vagter', icon: 'pulse-outline', on: 'pulse' },
   { key: 'projekter', label: 'Projekter', icon: 'grid-outline', on: 'grid' },
 ] as const;
 
@@ -65,6 +67,8 @@ export default function App() {
             <Log db={db} update={update} t={t} />
           ) : tab === 'fang' ? (
             <Fang db={db} update={update} t={t} />
+          ) : tab === 'vagter' ? (
+            <Vagter t={t} />
           ) : (
             <Projekter t={t} />
           )}
