@@ -1,13 +1,20 @@
-import { useMemo, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, AccessibilityInfo } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DB, Task, dayKey, uid, longDate, greeting } from '../store';
 import { Theme } from '../theme';
+import { Type } from '../type';
+import Brief from '../components/Brief';
 
 type Props = { db: DB; update: (fn: (d: DB) => DB) => void; t: Theme; navn: string };
 
 export default function Dag({ db, update, t, navn }: Props) {
   const [draft, setDraft] = useState('');
+  const [daempet, setDaempet] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setDaempet);
+  }, []);
   const key = dayKey();
   const tasks = useMemo(() => db.tasks.filter((x) => x.date === key), [db.tasks, key]);
   const done = tasks.filter((x) => x.done).length;
@@ -35,12 +42,7 @@ export default function Dag({ db, update, t, navn }: Props) {
         {greeting()}, {navn}
       </Text>
 
-      <View style={[s.summary, { backgroundColor: t.accentBg }]}>
-        <Text style={[s.sumNum, { color: t.accentText }]}>
-          {done} af {tasks.length || 0}
-        </Text>
-        <Text style={[s.sumLabel, { color: t.accentText }]}>klaret i dag</Text>
-      </View>
+      <Brief db={db} t={t} daempet={daempet} />
 
       <View style={s.row}>
         <TextInput
@@ -94,16 +96,13 @@ export default function Dag({ db, update, t, navn }: Props) {
 
 const s = StyleSheet.create({
   pad: { padding: 20, paddingBottom: 40 },
-  date: { fontSize: 13 },
-  h1: { fontSize: 28, fontWeight: '600', marginTop: 2, marginBottom: 18 },
-  summary: { borderRadius: 14, padding: 16, marginBottom: 20 },
-  sumNum: { fontSize: 26, fontWeight: '600' },
-  sumLabel: { fontSize: 13, marginTop: 2 },
+  date: { ...Type.footnote },
+  h1: { ...Type.largeTitle, marginTop: 2, marginBottom: 18 },
   row: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-  input: { flex: 1, height: 46, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 16 },
+  input: { flex: 1, height: 46, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, ...Type.body },
   addBtn: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   task: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: 1 },
-  taskText: { fontSize: 16, flex: 1 },
-  emptyText: { fontSize: 14, marginTop: 8, lineHeight: 20 },
-  hint: { fontSize: 12, marginTop: 16 },
+  taskText: { ...Type.callout, flex: 1 },
+  emptyText: { ...Type.subhead, marginTop: 8 },
+  hint: { ...Type.caption1, marginTop: 16 },
 });
