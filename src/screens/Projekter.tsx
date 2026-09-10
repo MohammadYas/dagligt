@@ -24,6 +24,9 @@ export default function Projekter({ t }: { t: Theme }) {
           source={{ uri: aaben.url }}
           style={{ flex: 1, backgroundColor: t.bg }}
           startInLoadingState
+          sharedCookiesEnabled
+          domStorageEnabled
+          allowsBackForwardNavigationGestures
           renderLoading={() => (
             <View style={[s.center, { backgroundColor: t.bg }]}>
               <ActivityIndicator color={t.accent} />

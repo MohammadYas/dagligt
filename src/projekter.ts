@@ -6,20 +6,19 @@ export type Projekt = {
   ikon: string;
 };
 
-// URL'er skal udfyldes. Tomme aabner ikke noget.
 export const PROJEKTER: Projekt[] = [
   {
     id: 'selja',
     navn: 'Selja',
-    beskrivelse: 'Admin',
-    url: '',
+    beskrivelse: 'selja.dk · admin',
+    url: 'https://selja.dk/admin',
     ikon: 'briefcase-outline',
   },
   {
     id: 'billedearv',
     navn: 'Billedearv',
-    beskrivelse: 'Admin panel',
-    url: '',
+    beskrivelse: 'billedearv.dk · admin',
+    url: 'https://billedearv.dk/admin',
     ikon: 'images-outline',
   },
 ];
