@@ -24,6 +24,7 @@ for (const post of ['manifest.webmanifest', 'sw.js', 'robots.txt', 'ikoner']) {
 }
 
 const hoved = `
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Auto Vagt">
@@ -36,6 +37,8 @@ const hoved = `
     <link rel="icon" type="image/png" sizes="192x192" href="/ikoner/ikon-192.png">
     <style>
       html, body { background: #131211; }
+      /* Bundlinjen skal ikke ligge under hjemme-indikatoren. */
+      #root { padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; }
       /* Overrulling i standalone-tilstand ser forkert ud paa en app-flade. */
       body { overscroll-behavior-y: none; }
     </style>

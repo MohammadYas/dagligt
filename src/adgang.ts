@@ -11,6 +11,18 @@ const NOEGLE = 'dagligapp.adgang';
 
 export const erWeb = typeof document !== 'undefined';
 
+/** Sandt naar siden er lagt paa hjemmeskaermen og aabnet derfra. */
+export function erStandalone(): boolean {
+  if (!erWeb) return false;
+  try {
+    const w = globalThis as any;
+    if (w.navigator?.standalone === true) return true;
+    return Boolean(w.matchMedia?.('(display-mode: standalone)')?.matches);
+  } catch {
+    return false;
+  }
+}
+
 let kode: string | null = null;
 
 if (erWeb) {
