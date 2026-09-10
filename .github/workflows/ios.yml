@@ -1,0 +1,32 @@
+name: Byg usigneret IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Vaelg Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Byg
+        run: ./build-ipa.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dagligt-ipa
+          path: build/Dagligt.ipa
+          retention-days: 30
+          if-no-files-found: error
