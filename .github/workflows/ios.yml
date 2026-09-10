@@ -1,9 +1,9 @@
 name: Byg usigneret IPA
 
+# Web udrulles direkte til Netlify, saa IPA'en bygges kun naar der
+# bedes om det. Ellers koerer tre builds i koe for tre smaa rettelser.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 jobs:
   ipa:

@@ -20,6 +20,16 @@
     X-Robots-Tag = "noindex, nofollow"
 
 [[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
   for = "/api/*"
   [headers.values]
     Cache-Control = "no-store"
