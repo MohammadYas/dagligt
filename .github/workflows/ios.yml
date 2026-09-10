@@ -18,8 +18,14 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Vaelg Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      - name: Vaelg nyeste Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          latest=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$latest" ]; then latest=/Applications/Xcode.app; fi
+          echo "Bruger $latest"
+          sudo xcode-select -s "$latest"
+          xcodebuild -version
 
       - name: Byg
         run: ./build-ipa.sh
