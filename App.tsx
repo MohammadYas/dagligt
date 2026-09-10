@@ -56,7 +56,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <SafeAreaView style={[s.root, { backgroundColor: t.bg }]} edges={['top', 'bottom']}>
+      {/* Kun toppen. Bunden ejes af fanelinjen, som skal naa skaermkanten;
+          en sikker zone her ville loefte hele appen fri af den. */}
+      <SafeAreaView style={[s.root, { backgroundColor: t.bg }]} edges={['top']}>
         {laast ? (
           <Laas t={t} aabnet={() => setLaast(false)} />
         ) : (
