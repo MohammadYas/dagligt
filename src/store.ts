@@ -2,7 +2,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Task = { id: string; text: string; done: boolean; date: string };
 export type LogEntry = { date: string; mood: number };
-export type Capture = { id: string; text: string; ts: number };
+export type Capture = {
+  id: string;
+  /** Det du skrev. Bevares altid, ogsaa naar rensningen lykkes. */
+  text: string;
+  ts: number;
+  /** Sat naar DeepSeek har renset tanken. */
+  titel?: string;
+  renset?: string;
+  /** 'venter' mens kaldet loeber, 'fejl' hvis det ikke lykkedes. */
+  tilstand?: 'venter' | 'renset' | 'fejl';
+  fejl?: string;
+};
 export type DB = { tasks: Task[]; logs: LogEntry[]; captures: Capture[] };
 
 const KEY = 'dagligapp.v1';

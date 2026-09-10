@@ -13,6 +13,7 @@ import {
 } from '../vagter';
 import { alleNavne, SYGEMELDING } from '../steder';
 import { dayKey } from '../store';
+import { Type, Tal } from '../type';
 import Kalender from '../components/Kalender';
 import Stedliste from '../components/Stedliste';
 import Vaelger from '../components/Vaelger';
@@ -389,54 +390,54 @@ function Fejllinje({ t, tekst }: { t: Theme; tekst: string }) {
 
 const s = StyleSheet.create({
   pad: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 44 },
-  h1: { fontSize: 32, fontWeight: '700', letterSpacing: -0.9, marginBottom: 18 },
+  h1: { ...Type.largeTitle, marginBottom: 18 },
   spinner: { marginTop: 60 },
 
   status: { paddingBottom: 20 },
   statusTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusNavn: { fontSize: 17, fontWeight: '600', flex: 1, letterSpacing: -0.2 },
-  statusTid: { fontSize: 12.5 },
+  statusNavn: { ...Type.headline, flex: 1 },
+  statusTid: { ...Type.caption1 },
 
   tal: { flexDirection: 'row', marginTop: 12, gap: 30 },
   maaling: {},
-  maalingTal: { fontSize: 24, fontWeight: '700', fontVariant: ['tabular-nums'], letterSpacing: -0.6 },
-  maalingNavn: { fontSize: 11.5, marginTop: 1 },
-  dine: { fontSize: 14, fontWeight: '500', marginTop: 12 },
-  mode: { fontSize: 12, marginTop: 12 },
+  maalingTal: { ...Type.title1, ...Tal },
+  maalingNavn: { ...Type.caption2, marginTop: 2 },
+  dine: { ...Type.subhead, fontWeight: '600', marginTop: 12 },
+  mode: { ...Type.caption1, marginTop: 12 },
 
   raaKnap: { paddingVertical: 6, marginBottom: 10 },
-  raaKnapTekst: { fontSize: 12.5 },
+  raaKnapTekst: { ...Type.footnote },
   raa: { fontFamily: MONO, fontSize: 11, lineHeight: 16, marginBottom: 14 },
 
   overskrift: {
     flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
     marginTop: 26, marginBottom: 12,
   },
-  overskriftTekst: { fontSize: 20, fontWeight: '600', letterSpacing: -0.4 },
-  overskriftHoejre: { fontSize: 12.5, fontVariant: ['tabular-nums'] },
+  overskriftTekst: { ...Type.title3 },
+  overskriftHoejre: { ...Type.footnote, ...Tal },
 
   genveje: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   genvej: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
-  genvejTekst: { fontSize: 12.5 },
+  genvejTekst: { ...Type.footnote },
 
   frist: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 },
-  fristVagt: { fontSize: 14 },
-  fristTid: { fontSize: 14, fontVariant: ['tabular-nums'] },
+  fristVagt: { ...Type.subhead },
+  fristTid: { ...Type.subhead, ...Tal },
   ring: { paddingVertical: 12 },
-  ringTekst: { fontSize: 15, fontWeight: '500' },
+  ringTekst: { ...Type.callout, fontWeight: '600' },
 
-  fod: { fontSize: 12, lineHeight: 18, marginTop: 22 },
+  fod: { ...Type.caption1, marginTop: 22 },
 
   fejl: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   fejlStreg: { width: 2, borderRadius: 1 },
-  fejlTekst: { fontSize: 13.5, flex: 1, lineHeight: 19 },
+  fejlTekst: { ...Type.footnote, flex: 1 },
 
   bjaelke: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 22, paddingTop: 14, paddingBottom: 18, borderTopWidth: 1,
   },
-  bjaelkeTekst: { fontSize: 13, fontVariant: ['tabular-nums'] },
+  bjaelkeTekst: { ...Type.footnote, ...Tal },
   gem: { minWidth: 96, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  gemTekst: { fontSize: 15.5, fontWeight: '600' },
+  gemTekst: { ...Type.callout, fontWeight: '600' },
 });

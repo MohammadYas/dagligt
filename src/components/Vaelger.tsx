@@ -8,6 +8,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
+import { Type } from '../type';
+import { smooth, daempetSkift } from '../motion';
 
 type Mulighed<T extends string> = { key: T; navn: string };
 
@@ -41,8 +43,8 @@ export default function Vaelger<T extends string>({
     Haptics.selectionAsync();
     const maalX = feltBredde * i;
     x.value = daempet
-      ? withTiming(maalX, { duration: 120 })
-      : withSpring(maalX, { damping: 18, stiffness: 220, mass: 0.6 });
+      ? withTiming(maalX, daempetSkift)
+      : withSpring(maalX, smooth);
     vaelg(m.key);
   }
 
@@ -81,5 +83,5 @@ const s = StyleSheet.create({
   spor: { flexDirection: 'row', borderRadius: 11, padding: 3, marginBottom: 18 },
   plade: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 9 },
   felt: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center' },
-  tekst: { fontSize: 14.5 },
+  tekst: { ...Type.subhead },
 });

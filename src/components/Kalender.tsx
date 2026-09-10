@@ -11,6 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
 import { dayKey } from '../store';
+import { Type, Tal } from '../type';
+import { snappy, bouncy, smooth, daempetSkift } from '../motion';
 
 const MAANEDER = [
   'januar', 'februar', 'marts', 'april', 'maj', 'juni',
@@ -114,8 +116,8 @@ function Dag({
   function tryk() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!daempet) {
-      skala.value = withSpring(0.8, { damping: 13, stiffness: 520 }, (faerdig) => {
-        if (faerdig) skala.value = withSpring(1, { damping: 10, stiffness: 300 });
+      skala.value = withSpring(0.8, bouncy, (faerdig) => {
+        if (faerdig) skala.value = withSpring(1, snappy);
       });
     }
     skift(dato);
@@ -126,8 +128,8 @@ function Dag({
   }));
 
   const fyldStil = useAnimatedStyle(() => ({
-    opacity: withTiming(valgt ? 1 : 0, { duration: daempet ? 100 : 190 }),
-    transform: [{ scale: withSpring(valgt ? 1 : 0.7, { damping: 15, stiffness: 240, mass: 0.5 }) }],
+    opacity: withTiming(valgt ? 1 : 0, daempet ? daempetSkift : { duration: 190 }),
+    transform: [{ scale: withSpring(valgt ? 1 : 0.7, smooth) }],
   }));
 
   return (
@@ -162,14 +164,14 @@ function Dag({
 const s = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   pil: { padding: 4 },
-  titel: { fontSize: 16, fontWeight: '600', textAlign: 'center' },
-  tael: { fontSize: 11, textAlign: 'center', marginTop: 1 },
+  titel: { ...Type.headline, textAlign: 'center' },
+  tael: { ...Type.caption2, textAlign: 'center', marginTop: 2 },
   raekke: { flexDirection: 'row', marginTop: 10, marginBottom: 2 },
-  ugedag: { flex: 1, textAlign: 'center', fontSize: 11 },
+  ugedag: { flex: 1, textAlign: 'center', ...Type.caption2 },
   gitter: { flexDirection: 'row', flexWrap: 'wrap' },
   celle: { width: '14.2857%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   midte: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   fyld: { position: 'absolute', width: 36, height: 36, borderRadius: 18 },
   iDagRing: { position: 'absolute', width: 36, height: 36, borderRadius: 18, borderWidth: 1.5 },
-  dagTekst: { fontSize: 15, fontVariant: ['tabular-nums'] },
+  dagTekst: { ...Type.subhead, ...Tal },
 });

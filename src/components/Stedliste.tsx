@@ -8,6 +8,8 @@ import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
 import { Sted } from '../vagter';
 import { GRUPPER } from '../steder';
+import { Type, Tal } from '../type';
+import { snappy, bouncy, daempetSkift } from '../motion';
 
 type Props = {
   steder: Sted[];
@@ -70,8 +72,8 @@ function Gruppe({
     const ny = !aaben;
     setAaben(ny);
     drej.value = daempet
-      ? withTiming(ny ? 1 : 0, { duration: 110 })
-      : withSpring(ny ? 1 : 0, { damping: 16, stiffness: 240 });
+      ? withTiming(ny ? 1 : 0, daempetSkift)
+      : withSpring(ny ? 1 : 0, snappy);
   }
 
   const pilStil = useAnimatedStyle(() => ({
@@ -137,8 +139,8 @@ function Raekke({
   function tryk() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!daempet) {
-      skala.value = withSpring(1.25, { damping: 11, stiffness: 540 }, (f) => {
-        if (f) skala.value = withSpring(1, { damping: 12, stiffness: 300 });
+      skala.value = withSpring(1.25, bouncy, (f) => {
+        if (f) skala.value = withSpring(1, snappy);
       });
     }
     skift(navn);
@@ -169,16 +171,16 @@ function Raekke({
 const s = StyleSheet.create({
   gruppe: { borderTopWidth: 1 },
   hoved: { flexDirection: 'row', alignItems: 'baseline', gap: 9, paddingVertical: 15 },
-  adresse: { fontSize: 15.5, fontWeight: '500' },
-  by: { fontSize: 12, flex: 1 },
-  tael: { fontSize: 13, fontVariant: ['tabular-nums'] },
+  adresse: { ...Type.callout, fontWeight: '600' },
+  by: { ...Type.caption1, flex: 1 },
+  tael: { ...Type.footnote, ...Tal },
 
   krop: { paddingBottom: 6 },
-  note: { fontSize: 12.5, lineHeight: 18, marginLeft: 24, marginBottom: 8 },
+  note: { ...Type.footnote, marginLeft: 24, marginBottom: 8 },
 
   raekke: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 10, marginLeft: 24 },
-  navn: { fontSize: 15, flex: 1 },
+  navn: { ...Type.subhead, flex: 1 },
 
   alle: { marginLeft: 24, paddingVertical: 10 },
-  alleTekst: { fontSize: 13.5 },
+  alleTekst: { ...Type.footnote },
 });
