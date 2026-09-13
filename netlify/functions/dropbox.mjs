@@ -8,6 +8,7 @@
  */
 
 import { harAdgang, AFVIST } from './_adgang.mjs';
+import { hent, gem } from './_dropbox.mjs';
 
 const TILLADTE = new Set([
   '/dage.txt',
@@ -15,31 +16,6 @@ const TILLADTE = new Set([
   '/status_cas.txt',
   '/status_torn.txt',
 ]);
-
-let cache = null;
-
-async function adgangstoken() {
-  if (cache && Date.now() < cache.udloeber) return cache.vaerdi;
-
-  const svar = await fetch('https://api.dropboxapi.com/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body:
-      'grant_type=refresh_token' +
-      '&refresh_token=' + encodeURIComponent(process.env.DROPBOX_REFRESH_TOKEN ?? '') +
-      '&client_id=' + encodeURIComponent(process.env.DROPBOX_APP_KEY ?? '') +
-      '&client_secret=' + encodeURIComponent(process.env.DROPBOX_APP_SECRET ?? ''),
-  });
-
-  if (!svar.ok) throw new Error('Kunne ikke forny adgangen til Dropbox (' + svar.status + ').');
-
-  const data = await svar.json();
-  cache = {
-    vaerdi: data.access_token,
-    udloeber: Date.now() + (data.expires_in ?? 14400) * 1000 - 60000,
-  };
-  return cache.vaerdi;
-}
 
 export default async (request) => {
   if (!harAdgang(request)) return AFVIST.clone();
@@ -51,51 +27,32 @@ export default async (request) => {
     return new Response('Ukendt fil.', { status: 400 });
   }
 
-  let token;
-  try {
-    token = await adgangstoken();
-  } catch (e) {
-    return new Response(String(e instanceof Error ? e.message : e), { status: 502 });
-  }
-
   if (request.method === 'GET') {
-    const r = await fetch('https://content.dropboxapi.com/2/files/download', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + token,
-        'Dropbox-API-Arg': JSON.stringify({ path: sti }),
-      },
-    });
-    const tekst = await r.text();
-    // Dropbox' eget skrivetidspunkt sendes med: maskinen der koerer
-    // scripterne har et ur der gaar forkert, saa filens egen tid lyver.
-    let skrevet = '';
     try {
-      skrevet = JSON.parse(r.headers.get('dropbox-api-result') ?? '{}').server_modified ?? '';
-    } catch {}
-
-    return new Response(tekst, {
-      status: r.status,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Access-Control-Expose-Headers': 'x-skrevet',
-        ...(skrevet ? { 'x-skrevet': skrevet } : {}),
-      },
-    });
+      const r = await hent(sti);
+      // Dropbox' eget skrivetidspunkt sendes med: maskinen der koerer
+      // scripterne har et ur der gaar forkert, saa filens egen tid lyver.
+      return new Response(r.tekst, {
+        status: r.status,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Access-Control-Expose-Headers': 'x-skrevet',
+          ...(r.skrevet ? { 'x-skrevet': r.skrevet } : {}),
+        },
+      });
+    } catch (e) {
+      return new Response(String(e instanceof Error ? e.message : e), { status: 502 });
+    }
   }
 
   if (request.method === 'POST') {
-    const krop = await request.text();
-    const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + token,
-        'Dropbox-API-Arg': JSON.stringify({ path: sti, mode: 'overwrite' }),
-        'Content-Type': 'application/octet-stream',
-      },
-      body: krop,
-    });
-    return new Response(r.ok ? 'ok' : await r.text(), { status: r.status });
+    try {
+      const krop = await request.text();
+      const r = await gem(sti, krop);
+      return new Response(r.ok ? 'ok' : r.tekst, { status: r.status });
+    } catch (e) {
+      return new Response(String(e instanceof Error ? e.message : e), { status: 502 });
+    }
   }
 
   return new Response('Metode ikke tilladt.', { status: 405 });

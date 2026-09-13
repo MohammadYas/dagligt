@@ -14,6 +14,7 @@ import {
 } from '../vagter';
 import { alleNavne, SYGEMELDING } from '../steder';
 import { dayKey } from '../store';
+import { erWeb, adgangsHeader } from '../adgang';
 import { Type, Tal } from '../type';
 import Kalender from '../components/Kalender';
 import Stedliste from '../components/Stedliste';
@@ -31,6 +32,26 @@ const MULIGHEDER: { key: Valg; navn: string }[] = [
 
 const MONO = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
+// Noeglen er offentlig; den private ligger i Netlifys miljoevariabler.
+const VAPID_NOEGLE =
+  'BKmvDla7PtqzEEOyw72demraYLGOnQJfM2Q-XetL4jWd92lPoyfAg6Gj1qXisCBFG6gqfcBipPC0uZnG_RcjMlk';
+
+const VARSEL_TEKST: Record<string, string> = {
+  ukendt: 'Telefonen siger til, hvis Tørn ikke har meldt sig i tre minutter.',
+  afvist: 'Notifikationer er blokeret for appen. Slå dem til i telefonens indstillinger.',
+  afmeldt: 'Slået fra. Tænd for at få besked om en Tørn der tier.',
+  tilmeldt: 'Tændt. Du får besked når Tørn har været tavs i over tre minutter.',
+  fejl: 'Kunne ikke nå serveren. Prøv igen — luk og åbn evt. appen først.',
+};
+
+function vapidNoegle(base64: string): Uint8Array {
+  const w = globalThis as any;
+  const ren = base64.replace(/-/g, '+').replace(/_/g, '/');
+  const polstret = ren + '='.repeat((4 - (ren.length % 4)) % 4);
+  const raa = w.atob(polstret);
+  return new Uint8Array(raa.length).map((_, i) => raa.charCodeAt(i));
+}
+
 export default function Vagter({ t }: { t: Theme }) {
   const [valg, setValg] = useState<Valg>('cas');
   const [status, setStatus] = useState<Partial<Record<Script, Status>>>({});
@@ -44,6 +65,9 @@ export default function Vagter({ t }: { t: Theme }) {
   const [slag, setSlag] = useState(0);
   const [daempet, setDaempet] = useState(false);
   const [opsat, setOpsat] = useState(true);
+  const [varsel, setVarsel] = useState<'ukendt' | 'afvist' | 'tilmeldt' | 'afmeldt' | 'fejl'>(
+    'ukendt',
+  );
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setDaempet);
@@ -51,6 +75,84 @@ export default function Vagter({ t }: { t: Theme }) {
     const lyt = AccessibilityInfo.addEventListener('reduceMotionChanged', setDaempet);
     return () => lyt.remove();
   }, []);
+
+  // Laeser om telefonen allerede er tilmeldt push. Et abonnement der kun
+  // ligger paa telefonen sendes ogsaa til serveren, saa de ikke skilles.
+  useEffect(() => {
+    if (!erWeb) return;
+    const w = globalThis as any;
+    if (!w.Notification || !('serviceWorker' in w.navigator)) {
+      setVarsel('afvist');
+      return;
+    }
+    (async () => {
+      if (w.Notification.permission === 'denied') {
+        setVarsel('afvist');
+        return;
+      }
+      try {
+        const reg = await w.navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          setVarsel(w.Notification.permission === 'granted' ? 'afmeldt' : 'ukendt');
+          return;
+        }
+        setVarsel('tilmeldt');
+        await fetch('/api/push', {
+          method: 'POST',
+          headers: { ...adgangsHeader(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub.toJSON()),
+        });
+      } catch {
+        setVarsel('fejl');
+      }
+    })();
+  }, []);
+
+  async function skiftVarsel() {
+    if (!erWeb) return;
+    const w = globalThis as any;
+
+    if (varsel === 'tilmeldt') {
+      try {
+        const reg = await w.navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await sub.unsubscribe();
+          await fetch('/api/push', { method: 'DELETE', headers: adgangsHeader() });
+        }
+        setVarsel('afmeldt');
+      } catch {
+        setVarsel('fejl');
+      }
+      return;
+    }
+
+    try {
+      // iOS kraever at sporgsmaalet kommer direkte fra et tryk.
+      const tilladelse = await w.Notification.requestPermission();
+      if (tilladelse !== 'granted') {
+        setVarsel('afvist');
+        return;
+      }
+      const reg = await w.navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidNoegle(VAPID_NOEGLE),
+        });
+      }
+      const r = await fetch('/api/push', {
+        method: 'POST',
+        headers: { ...adgangsHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      setVarsel(r.ok ? 'tilmeldt' : 'fejl');
+    } catch {
+      setVarsel('fejl');
+    }
+  }
 
   const scripts: Script[] = valg === 'begge' ? ['cas', 'torn'] : [valg];
   const kilde: Script = valg === 'torn' ? 'torn' : 'cas';
@@ -213,6 +315,34 @@ export default function Vagter({ t }: { t: Theme }) {
                   ) : null,
                 )
               : null}
+
+            {erWeb ? (
+              <View style={s.varsel}>
+                <View style={s.varselKasse}>
+                  <Text style={[s.varselTitel, { color: t.text }]}>Varsel når Tørn tier</Text>
+                  <Text style={[s.varselForklaring, { color: t.faint }]}>
+                    {VARSEL_TEKST[varsel]}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={skiftVarsel}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    s.varselKnap,
+                    { borderColor: t.line, opacity: pressed ? 0.5 : 1 },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      s.varselKnapTekst,
+                      { color: varsel === 'tilmeldt' ? t.accent : t.dim },
+                    ]}
+                  >
+                    {varsel === 'tilmeldt' ? 'Sluk' : 'Tænd'}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
 
             <Overskrift
               t={t}
@@ -420,6 +550,13 @@ const s = StyleSheet.create({
   raaKnap: { paddingVertical: 6, marginBottom: 10 },
   raaKnapTekst: { ...Type.footnote },
   raa: { fontFamily: MONO, fontSize: 11, lineHeight: 16, marginBottom: 14 },
+
+  varsel: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6, marginBottom: 4 },
+  varselKasse: { flex: 1 },
+  varselTitel: { ...Type.subhead, fontWeight: '600' },
+  varselForklaring: { ...Type.caption1, marginTop: 2 },
+  varselKnap: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, borderWidth: 1 },
+  varselKnapTekst: { ...Type.footnote },
 
   overskrift: {
     flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',

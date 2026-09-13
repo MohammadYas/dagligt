@@ -42,3 +42,36 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('message', (e) => {
   if (e.data === 'opdater') self.skipWaiting();
 });
+
+// Varsel naar Toern-scripter tier. Selve tjekket ligger i en
+// Netlify-funktion der sender push; her vises kun beskeden.
+self.addEventListener('push', (e) => {
+  let data = {};
+  try {
+    data = e.data ? e.data.json() : {};
+  } catch {}
+
+  e.waitUntil(
+    self.registration.showNotification(data.titel ?? 'Auto Vagt', {
+      body: data.tekst ?? '',
+      icon: '/ikoner/ikon-192.png',
+      badge: '/ikoner/ikon-192.png',
+      tag: 'torn-tavs',
+    }),
+  );
+});
+
+// Et tryk paa varselet aabner appen.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((vinduer) => {
+        for (const v of vinduer) {
+          if ('focus' in v) return v.focus();
+        }
+        return self.clients.openWindow('/');
+      }),
+  );
+});
