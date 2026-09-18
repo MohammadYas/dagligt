@@ -141,10 +141,10 @@ export type Status = {
  * et script der falder ud efterlader en fil der stadig lyder rask. Alderen
  * er det eneste der afsloerer det.
  *
- * Cas melder omkring hvert halve time naar den koerer normalt, saa graensen
- * ligger paa halvanden time: tre sprungne runder, ikke én forsinket.
+ * Begge scripter melder sig omkring hvert minut, saa tre minutter er tre
+ * sprungne runder, ikke én forsinket.
  */
-export const TAVS_EFTER_MS = 90 * 60_000;
+export const TAVS_EFTER_MS = 3 * 60_000;
 
 export function parseStatus(raa: string, skrevet?: Date | null): Status {
   const find = (m: RegExp) => raa.match(m);

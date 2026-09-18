@@ -86,15 +86,23 @@ afsnit('Statusfiler fra scripterne');
   const gammel = parseStatus(tankestreg.replace(/Sidste tjek: .*/, 'Sidste tjek: 2020-01-01 00:00:00'));
   ok('gammel status bliver tavs', tilstand(gammel) === 'advarsel');
 
-  // Cas melder omkring hvert halve time og skal ikke kaldes tavs af det
-  const halvTime = new Date(Date.now() - 28 * 60000);
+  // Begge scripter melder sig omkring hvert minut
+  const toMinutter = new Date(Date.now() - 2 * 60000);
   const p = (n: number) => String(n).padStart(2, '0');
   const nylig = parseStatus(tankestreg.replace(
     /Sidste tjek: .*/,
-    'Sidste tjek: ' + halvTime.getFullYear() + '-' + p(halvTime.getMonth() + 1) + '-' + p(halvTime.getDate()) +
-    ' ' + p(halvTime.getHours()) + ':' + p(halvTime.getMinutes()) + ':00',
+    'Sidste tjek: ' + toMinutter.getFullYear() + '-' + p(toMinutter.getMonth() + 1) + '-' + p(toMinutter.getDate()) +
+    ' ' + p(toMinutter.getHours()) + ':' + p(toMinutter.getMinutes()) + ':00',
   ));
-  ok('28 minutter er stadig ok', tilstand(nylig) === 'ok');
+  ok('2 minutter er stadig ok', tilstand(nylig) === 'ok');
+
+  const tiMinutter = new Date(Date.now() - 10 * 60000);
+  const stille = parseStatus(tankestreg.replace(
+    /Sidste tjek: .*/,
+    'Sidste tjek: ' + tiMinutter.getFullYear() + '-' + p(tiMinutter.getMonth() + 1) + '-' + p(tiMinutter.getDate()) +
+    ' ' + p(tiMinutter.getHours()) + ':' + p(tiMinutter.getMinutes()) + ':00',
+  ));
+  ok('10 minutter melder ikke', tilstand(stille) === 'advarsel');
 
   const treTimer = new Date(Date.now() - 192 * 60000);
   const doed = parseStatus(tankestreg.replace(
@@ -103,11 +111,11 @@ afsnit('Statusfiler fra scripterne');
     ' ' + p(treTimer.getHours()) + ':' + p(treTimer.getMinutes()) + ':00',
   ));
   ok('tre timer melder ikke', tilstand(doed) === 'advarsel');
-  ok('graensen er halvanden time', TAVS_EFTER_MS === 5400000);
+  ok('graensen er tre minutter', TAVS_EFTER_MS === 180000);
 
   // Scriptmaskinens ur gaar ni timer forkert; Dropbox' stempel skal vinde
   const forkertUr = tankestreg.replace(/Sidste tjek: .*/, 'Sidste tjek: 2026-01-01 03:00:00');
-  const medStempel = parseStatus(forkertUr, new Date(Date.now() - 20 * 60000));
+  const medStempel = parseStatus(forkertUr, new Date(Date.now() - 60_000));
   ok('Dropbox-stempel slaar filens egen tid', tilstand(medStempel) === 'ok');
   const gammeltStempel = parseStatus(forkertUr, new Date(Date.now() - 200 * 60000));
   ok('gammelt stempel melder ikke', tilstand(gammeltStempel) === 'advarsel');
