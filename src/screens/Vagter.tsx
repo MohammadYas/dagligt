@@ -448,6 +448,11 @@ function Statuslinje({
   const farve = tl === 'ok' ? t.done : tl === 'advarsel' ? t.advarsel : t.fejl;
   const ord = tl === 'ok' ? 'kører' : tl === 'advarsel' ? 'melder ikke' : 'stoppet';
 
+  // Linjerne vises ordret: scripterne skriver fordelingen, appen gentager.
+  const linjer = status.raa.split(/\r?\n/).map((l) => l.trim());
+  const bureauer = linjer.find((l) => /^Arbejdspladser/i.test(l));
+  const fordeling = linjer.find((l) => /^Ledige vagter/i.test(l));
+
   return (
     <View style={s.status}>
       <View style={s.statusTop}>
@@ -472,6 +477,10 @@ function Statuslinje({
           <Maaling t={t} navn="fejl" v={status.fejl} daempet={daempet} fremhaev />
         ) : null}
       </View>
+
+      {bureauer ? <Text style={[s.dine, { color: t.dim }]}>{bureauer}</Text> : null}
+
+      {fordeling ? <Text style={[s.dine, { color: t.dim }]}>{fordeling}</Text> : null}
 
       {status.dine && status.dine.toLowerCase() !== 'ingen' ? (
         <Text

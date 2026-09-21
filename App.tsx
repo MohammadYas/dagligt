@@ -13,6 +13,7 @@ import Fang from './src/screens/Fang';
 import Projekter from './src/screens/Projekter';
 import Vagter from './src/screens/Vagter';
 import Rute from './src/screens/Rute';
+import Indstillinger from './src/screens/Indstillinger';
 
 const NAVN = 'mo';
 
@@ -22,6 +23,7 @@ const TABS = [
   { key: 'rute', label: 'Rute', icon: 'navigate-outline', on: 'navigate' },
   { key: 'vagter', label: 'Vagter', icon: 'pulse-outline', on: 'pulse' },
   { key: 'projekter', label: 'Projekter', icon: 'grid-outline', on: 'grid' },
+  { key: 'indstillinger', label: 'Indstillinger', icon: 'settings-outline', on: 'settings' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -79,8 +81,10 @@ export default function App() {
             <Rute t={t} />
           ) : tab === 'vagter' ? (
             <Vagter t={t} />
-          ) : (
+          ) : tab === 'projekter' ? (
             <Projekter t={t} />
+          ) : (
+            <Indstillinger t={t} />
           )}
 
           <View

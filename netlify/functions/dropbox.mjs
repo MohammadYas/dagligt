@@ -15,6 +15,8 @@ const TILLADTE = new Set([
   '/torn_dage.txt',
   '/status_cas.txt',
   '/status_torn.txt',
+  '/bureauer.txt',
+  '/steder.txt',
 ]);
 
 export default async (request) => {

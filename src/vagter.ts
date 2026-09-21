@@ -152,8 +152,9 @@ export function parseStatus(raa: string, skrevet?: Date | null): Status {
   const koererM = find(/Kører:\s*(JA|NEJ|STOPPET)/i);
   const fejlM = find(/Fejl i træk:\s*(\d+)/i);
   const tjekM = find(/Sidste tjek:\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/i);
-  // Statusfilerne bruger tankestreg, ikke bindestreg. Begge accepteres.
-  const vagterM = find(/Ledige vagter:\s*(\d+)\s*[-–—]\s*Matcher:\s*(\d+)/i);
+  // Hver for sig: linjen kan ogsaa hedde "Ledige vagter: 9 (Akut Hjælp: 2 · MultiCare: 7)".
+  const ledigeM = find(/Ledige vagter:\s*(\d+)/i);
+  const matcherM = find(/Matcher:\s*(\d+)/i);
   const tagetM = find(/Taget i (?:dag|alt):\s*(\d+(?:\/\d+)?)/i);
   const dineM = find(/Dine vagter:\s*(.+)/i);
   const modeM = find(/Mode:\s*(.+)/i);
@@ -169,8 +170,8 @@ export function parseStatus(raa: string, skrevet?: Date | null): Status {
     koerer: (koererM?.[1] ?? '').toUpperCase() === 'JA',
     fejl: fejlM ? parseInt(fejlM[1], 10) : 0,
     sidsteTjek: maalt,
-    ledige: vagterM ? parseInt(vagterM[1], 10) : null,
-    matcher: vagterM ? parseInt(vagterM[2], 10) : null,
+    ledige: ledigeM ? parseInt(ledigeM[1], 10) : null,
+    matcher: matcherM ? parseInt(matcherM[1], 10) : null,
     taget: tagetM?.[1] ?? null,
     mode: modeM?.[1]?.trim() ?? null,
     dine: dineM?.[1]?.trim() ?? null,
