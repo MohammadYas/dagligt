@@ -208,5 +208,13 @@ export function normalisePayData(value: unknown): PayData {
 }
 // Same key and raw JSON string that AsyncStorage wrote to localStorage on web.
 const lager = () => (globalThis as { localStorage?: Pick<Storage, 'getItem' | 'setItem'> }).localStorage;
-export async function loadPayData(): Promise<PayData> { try { return normalisePayData(JSON.parse(lager()?.getItem(STORAGE_KEY) || 'null')); } catch { return normalisePayData(null); } }
+const BACKUP_KEY = STORAGE_KEY + '.backup';
+export async function loadPayData(): Promise<PayData> {
+  try {
+    const raa = lager()?.getItem(STORAGE_KEY) ?? null;
+    // One untouched copy of the data as first found, kept for a rollback; never overwritten.
+    if (raa && lager()?.getItem(BACKUP_KEY) == null) lager()?.setItem(BACKUP_KEY, raa);
+    return normalisePayData(JSON.parse(raa || 'null'));
+  } catch { return normalisePayData(null); }
+}
 export async function savePayData(data: PayData): Promise<void> { lager()?.setItem(STORAGE_KEY, JSON.stringify(normalisePayData(data))); }

@@ -130,3 +130,20 @@ test('løndata gemmes under samme localStorage-nøgle og format', async () => {
     if (before === undefined) delete g.localStorage; else g.localStorage = before;
   }
 });
+
+test('første start gemmer en uændret kopi af de gamle løndata, og overskriver den aldrig', async () => {
+  const gammel = '{"version":2,"shifts":[{"id":"a1","employer":"akut","date":"2026-10-18","start":"15:00","end":"23:00","unpaidBreakMinutes":0,"createdAt":1,"updatedAt":2}]}';
+  const store = new Map<string, string>([['vagtstatus.lon.v1', gammel]]);
+  const g = globalThis as any;
+  const before = g.localStorage;
+  g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); } };
+  try {
+    await loadPayData();
+    assert.equal(store.get('vagtstatus.lon.v1.backup'), gammel);
+    store.set('vagtstatus.lon.v1', '{"version":2,"shifts":[]}');
+    await loadPayData();
+    assert.equal(store.get('vagtstatus.lon.v1.backup'), gammel);
+  } finally {
+    if (before === undefined) delete g.localStorage; else g.localStorage = before;
+  }
+});
