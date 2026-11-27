@@ -10,6 +10,7 @@ import Loen from './screens/Loen';
 import Rute from './screens/Rute';
 import Indstillinger from './screens/Indstillinger';
 import { useGemVedForlad } from './data/session';
+import { bekraeftVarslerVedStart } from './komponenter/Varsler';
 
 type Nav = { gaa: (s: Skaerm) => void };
 const SKAERME: Record<Exclude<Skaerm, 'rute'>, (p: Nav) => ReactElement> = {
@@ -28,6 +29,7 @@ export default function App() {
   const scroll = useRef<HTMLDivElement>(null);
   useEffect(() => { if (skaerm === 'rute') setRuteAabnet(true); scroll.current?.scrollTo(0, 0); }, [skaerm]);
   useGemVedForlad();
+  useEffect(() => { if (!laast) bekraeftVarslerVedStart(); }, [laast]);
 
   if (laast) return <Laas aabnet={() => setLaast(false)} />;
 

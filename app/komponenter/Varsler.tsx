@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adgangsHeader } from '../../src/adgang';
+import { bekraeftAbonnement } from '../data/varsler';
 import { Besked, Gruppe, Kontakt } from '../ui/kit';
 
 // Same VAPID public key and /api/push calls as the old app.
@@ -15,11 +16,19 @@ async function send(method: string, body?: object) {
   if (!r.ok) throw new Error('Kunne ikke gemme varsler. Prøv igen.');
 }
 
+const understoetter = () => 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+const nuvaerende = async () => (await navigator.serviceWorker.getRegistration())?.pushManager.getSubscription();
+
+/** Called once at launch: keeps the server's push endpoint current even if Settings is never opened. */
+export function bekraeftVarslerVedStart() {
+  if (understoetter()) bekraeftAbonnement(nuvaerende, send).catch(() => {});
+}
+
 export default function Varsler() {
   const [til, setTil] = useState(false);
   const [optaget, setOptaget] = useState(false);
   const [fejl, setFejl] = useState('');
-  const understoettet = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+  const understoettet = understoetter();
 
   useEffect(() => {
     if (!understoettet) return;
@@ -27,11 +36,7 @@ export default function Varsler() {
     setOptaget(true);
     (async () => {
       // Reconcile an already permitted subscription; never ask for permission on launch.
-      const reg = await navigator.serviceWorker.getRegistration();
-      const sub = await reg?.pushManager.getSubscription();
-      if (!sub) return;
-      await send('POST', sub.toJSON());
-      if (aktuel) setTil(true);
+      if (await bekraeftAbonnement(nuvaerende, send) && aktuel) setTil(true);
     })().catch(() => { if (aktuel) setFejl('Kunne ikke bekræfte varsler. Slå dem til igen for at prøve igen.'); })
       .finally(() => { if (aktuel) setOptaget(false); });
     return () => { aktuel = false; };

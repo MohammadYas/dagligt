@@ -8,3 +8,12 @@ export function maanedsCeller(aar: number, maaned: number): (string | null)[] {
   for (let d = 1; d <= dage; d++) celler.push(`${aar}-${pad(maaned + 1)}-${pad(d)}`);
   return celler;
 }
+
+/** Month slide variants. The month on its way out ignores taps, so a tap right after a swipe lands on the new month. */
+export function maanedsVarianter(forskyd: number) {
+  return {
+    ind: (r: number) => ({ x: r * forskyd, opacity: 0, pointerEvents: 'none' as const }),
+    mid: { x: 0, opacity: 1, pointerEvents: 'auto' as const },
+    ud: (r: number) => ({ x: -r * forskyd, opacity: 0, pointerEvents: 'none' as const }),
+  };
+}

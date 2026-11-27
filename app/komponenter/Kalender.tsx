@@ -3,7 +3,7 @@ import { AnimatePresence, motion, PanInfo } from 'motion/react';
 import { kalenderAnker } from '../../src/datoanker';
 import { EASE_OUT, useDaempet } from '../ui/bevaegelse';
 import Ikon from '../ui/Ikon';
-import { maanedsCeller } from './kalenderdata';
+import { maanedsCeller, maanedsVarianter } from './kalenderdata';
 
 const UGEDAGE = ['M', 'T', 'O', 'T', 'F', 'L', 'S'];
 const TAERSKEL = 60;
@@ -46,11 +46,7 @@ export default function Kalender({ valgte, onSkift, iDag }: { valgte: string[]; 
         <AnimatePresence initial={false} custom={retning} mode="popLayout">
           <motion.div
             key={`${maaned.aar}-${maaned.m}`} className="kal__gitter" custom={retning}
-            variants={{
-              ind: (r: number) => ({ x: r * forskyd, opacity: 0 }),
-              mid: { x: 0, opacity: 1 },
-              ud: (r: number) => ({ x: -r * forskyd, opacity: 0 }),
-            }}
+            variants={maanedsVarianter(forskyd)}
             initial="ind" animate="mid" exit="ud" transition={{ duration: 0.18, ease: EASE_OUT }}
             drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.25} dragSnapToOrigin onDragEnd={slip}
           >

@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
-import { calculateShiftGross, EMPLOYER_LABEL, Employer, formatHours, formatKr, isWeekend, longDate, PayData, Shift, todayKey } from '../../src/lon';
+import { EMPLOYER_LABEL, Employer, formatHours, formatKr, isWeekend, longDate, PayData, Shift, todayKey } from '../../src/lon';
 import Ark from '../ui/Ark';
+import { beregnVagt } from './vagtform';
 import { Felt, Knap, Segment } from '../ui/kit';
 
 type Kladde = Pick<Shift, 'employer' | 'date' | 'start' | 'end' | 'unpaidBreakMinutes'>;
 const ny = (): Kladde => ({ employer: 'multicare', date: todayKey(), start: '07:00', end: '15:00', unpaidBreakMinutes: 0 });
 const kopi = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 const HURTIG: [string, string][] = [['07:00', '15:00'], ['15:00', '23:00'], ['23:00', '07:00']];
-const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+const gyldigDato = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d : todayKey());
+const uid =() => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 /** Create or edit a shift. Same fields and defaults as the old ShiftEditor. */
 export default function VagtArk({ aaben, onLuk, data, original, onGem, onSlet }: {
@@ -26,8 +28,7 @@ function Formular({ data, original, onGem, onSlet }: { data: PayData; original?:
   const [bekraeft, setBekraeft] = useState(false);
 
   const proeve = useMemo<Shift>(() => ({ id: 'proeve', ...k, createdAt: 0, updatedAt: 0, rateSnapshot: original?.rateSnapshot ?? data.settings.rates }), [k, original, data.settings.rates]);
-  const beregning = calculateShiftGross(proeve, data.settings);
-  const gyldig = /^\d{4}-\d{2}-\d{2}$/.test(k.date) && beregning.totalMinutes > 0;
+  const { gyldig, beregning } = beregnVagt(proeve, data.settings);
   const saet = (p: Partial<Kladde>) => setK(c => ({ ...c, ...p }));
 
   const gem = () => {
@@ -55,7 +56,7 @@ function Formular({ data, original, onGem, onSlet }: { data: PayData; original?:
         onChange={e => { const n = Number(e.target.value.replace(/\D/g, '') || 0); saet({ unpaidBreakMinutes: n }); }} />
       <div className="vagt__beregning" aria-live="polite">
         <span className="t-title2 tal">{formatHours(beregning.paidMinutes / 60)} timer · {formatKr(beregning.gross)}</span>
-        <span className="t-foot">{longDate(k.date || todayKey())} · {isWeekend(k.date || todayKey()) ? 'Weekendsats' : 'Hverdagssats'}</span>
+        <span className="t-foot">{longDate(gyldigDato(k.date))} · {isWeekend(gyldigDato(k.date)) ? 'Weekendsats' : 'Hverdagssats'}</span>
       </div>
       <Knap label={original ? 'Gem vagt' : 'Opret vagt'} variant="primaer" fuld onPress={gem} deaktiveret={!gyldig} />
       {onSlet && (bekraeft
