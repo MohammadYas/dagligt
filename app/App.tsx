@@ -7,18 +7,16 @@ import Hjem from './screens/Hjem';
 import DageSteder from './screens/DageSteder';
 import Arbejdspladser from './screens/Arbejdspladser';
 import Loen from './screens/Loen';
+import Rute from './screens/Rute';
+import Indstillinger from './screens/Indstillinger';
 import { useGemVedForlad } from './data/session';
-
-function Pladsholder({ navn }: { navn: string }) {
-  return <div className="side"><h1 className="t-large">{navn}</h1></div>;
-}
 
 type Nav = { gaa: (s: Skaerm) => void };
 const SKAERME: Record<Exclude<Skaerm, 'rute'>, (p: Nav) => ReactElement> = {
   hjem: ({ gaa }) => <Hjem gaa={gaa} />,
   dage: ({ gaa }) => <DageSteder gaa={gaa} />,
   arbejdspladser: ({ gaa }) => <Arbejdspladser gaa={gaa} />,
-  indstillinger: () => <Pladsholder navn="Indstillinger" />,
+  indstillinger: ({ gaa }) => <Indstillinger gaa={gaa} />,
   loen: () => <Loen />,
 };
 
@@ -42,7 +40,7 @@ export default function App() {
       </div>
       {ruteAabnet && (
         <div className="skaerm" hidden={skaerm !== 'rute'}>
-          <Pladsholder navn="Rute" />
+          <Rute />
         </div>
       )}
       <TabBar aktiv={faneFor(skaerm)} vaelg={vaelgFane} />

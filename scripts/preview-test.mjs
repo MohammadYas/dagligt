@@ -13,12 +13,18 @@ const files = new Map(Object.entries({
 }));
 const writes = [];
 let failNext = false;
+let push = null;
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.ttf': 'font/ttf', '.webmanifest': 'application/manifest+json' };
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1:8091');
   res.setHeader('Cache-Control', 'no-store');
   if (url.pathname === '/__test/fail' && req.method === 'POST') { failNext = true; res.end('armed'); return; }
-  if (url.pathname === '/__test/results') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ writes, files: Object.fromEntries(files) })); return; }
+  if (url.pathname === '/__test/results') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ writes, push, files: Object.fromEntries(files) })); return; }
+  if (url.pathname === '/api/push') {
+    if (req.method === 'POST') { let t = ''; for await (const c of req) t += c; push = JSON.parse(t || 'null'); res.writeHead(201); res.end('ok'); return; }
+    if (req.method === 'DELETE') { push = null; res.writeHead(204); res.end(); return; }
+    res.writeHead(405); res.end(); return;
+  }
   if (url.pathname === '/api/dropbox') {
     const path = url.searchParams.get('sti');
     if (req.method === 'POST') {
@@ -28,7 +34,7 @@ createServer(async (req, res) => {
     }
     if (path?.startsWith('/status_')) {
       res.setHeader('x-skrevet', new Date().toISOString());
-      res.end('Kører: JA\nLedige vagter: 12\nMatcher: 2\nTaget i alt: 1\nFejl i træk: 0\nMode: Lokale testdata\n'); return;
+      res.end('Kører: JA\nLedige vagter: 12\nMatcher: 2\nTaget i alt: 1\nDine vagter: 29/11 07:00 Team Forlev\nFejl i træk: 0\nMode: Lokale testdata\n'); return;
     }
     if (!files.has(path)) { res.writeHead(409); res.end('missing'); return; }
     res.end(files.get(path)); return;

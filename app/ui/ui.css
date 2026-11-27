@@ -148,9 +148,9 @@ button.raekke:active { background: var(--card-2); }
 .kal__uge span { text-align: center; font-size: 12px; font-weight: 600; color: var(--faint); padding: 4px 0 6px; }
 .kal__vindue { overflow: hidden; touch-action: pan-y; }
 .kal__gitter { row-gap: 2px; }
-.kal__dag { display: flex; align-items: center; justify-content: center; min-height: 46px; -webkit-tap-highlight-color: transparent; }
+.kal__dag { min-width: 0; display: flex; align-items: center; justify-content: center; min-height: 46px; -webkit-tap-highlight-color: transparent; }
 .kal__dag span {
-  width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  width: min(42px, 100%); aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text);
   transition: background-color 150ms ease, color 150ms ease, transform 160ms var(--ease-out);
 }
@@ -190,3 +190,11 @@ button.raekke:active { background: var(--card-2); }
 
 /* Field stacks inside groups */
 .felter { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+
+/* Route */
+.rute__soeg { display: flex; flex-direction: column; gap: 10px; }
+.maerke { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 8px; color: var(--warn); background: rgba(255, 208, 106, 0.14); }
+.stop__tekst { padding: 12px 0; }
+.tekstknap { min-height: 44px; padding: 0 8px; color: var(--accent); font-size: 17px; }
+.tekstknap--fare { color: var(--err); font-weight: 600; }
+a.knap { text-decoration: none; }
