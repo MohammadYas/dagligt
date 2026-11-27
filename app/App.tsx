@@ -5,6 +5,8 @@ import TabBar, { faneFor, Fane } from './TabBar';
 import Laas from './screens/Laas';
 import Hjem from './screens/Hjem';
 import DageSteder from './screens/DageSteder';
+import Arbejdspladser from './screens/Arbejdspladser';
+import Loen from './screens/Loen';
 import { useGemVedForlad } from './data/session';
 
 function Pladsholder({ navn }: { navn: string }) {
@@ -15,9 +17,9 @@ type Nav = { gaa: (s: Skaerm) => void };
 const SKAERME: Record<Exclude<Skaerm, 'rute'>, (p: Nav) => ReactElement> = {
   hjem: ({ gaa }) => <Hjem gaa={gaa} />,
   dage: ({ gaa }) => <DageSteder gaa={gaa} />,
-  arbejdspladser: () => <Pladsholder navn="Arbejdspladser" />,
+  arbejdspladser: ({ gaa }) => <Arbejdspladser gaa={gaa} />,
   indstillinger: () => <Pladsholder navn="Indstillinger" />,
-  loen: () => <Pladsholder navn="Løn" />,
+  loen: () => <Loen />,
 };
 
 export default function App() {

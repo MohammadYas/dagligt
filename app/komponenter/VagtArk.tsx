@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { calculateShiftGross, EMPLOYER_LABEL, Employer, formatHours, formatKr, isWeekend, longDate, PayData, Shift, todayKey } from '../../src/lon';
 import Ark from '../ui/Ark';
 import { Felt, Knap, Segment } from '../ui/kit';
@@ -13,13 +13,17 @@ const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.ra
 export default function VagtArk({ aaben, onLuk, data, original, onGem, onSlet }: {
   aaben: boolean; onLuk: () => void; data: PayData; original?: Shift; onGem: (shift: Shift) => void; onSlet?: () => void;
 }) {
-  const [k, setK] = useState<Kladde>(ny);
+  return (
+    <Ark aaben={aaben} onLuk={onLuk} titel={original ? 'Rediger vagt' : 'Opret vagt'}>
+      <Formular data={data} original={original} onGem={onGem} onSlet={onSlet} />
+    </Ark>
+  );
+}
+
+// Mounted only while the sheet is open, so it starts from the shift's own values in the first frame.
+function Formular({ data, original, onGem, onSlet }: { data: PayData; original?: Shift; onGem: (shift: Shift) => void; onSlet?: () => void }) {
+  const [k, setK] = useState<Kladde>(() => (original ? { employer: original.employer, date: original.date, start: original.start, end: original.end, unpaidBreakMinutes: original.unpaidBreakMinutes } : ny()));
   const [bekraeft, setBekraeft] = useState(false);
-  useEffect(() => {
-    if (!aaben) return;
-    setBekraeft(false);
-    setK(original ? { employer: original.employer, date: original.date, start: original.start, end: original.end, unpaidBreakMinutes: original.unpaidBreakMinutes } : ny());
-  }, [aaben, original]);
 
   const proeve = useMemo<Shift>(() => ({ id: 'proeve', ...k, createdAt: 0, updatedAt: 0, rateSnapshot: original?.rateSnapshot ?? data.settings.rates }), [k, original, data.settings.rates]);
   const beregning = calculateShiftGross(proeve, data.settings);
@@ -33,7 +37,7 @@ export default function VagtArk({ aaben, onLuk, data, original, onGem, onSlet }:
   };
 
   return (
-    <Ark aaben={aaben} onLuk={onLuk} titel={original ? 'Rediger vagt' : 'Opret vagt'}>
+    <>
       <Segment label="Arbejdsgiver" vaerdi={k.employer} onSkift={(employer: Employer) => saet({ employer })}
         valg={(['multicare', 'akut'] as Employer[]).map(v => ({ v, tekst: EMPLOYER_LABEL[v] }))} />
       <Felt label="Dato" type="date" value={k.date} onChange={e => saet({ date: e.target.value })} required />
@@ -57,6 +61,6 @@ export default function VagtArk({ aaben, onLuk, data, original, onGem, onSlet }:
       {onSlet && (bekraeft
         ? <div className="vagt__slet"><p className="t-sub">Vagten fjernes fra lønperioden.</p><Knap label="Slet vagt" variant="fare" fuld onPress={onSlet} /><Knap label="Annuller" variant="stille" fuld onPress={() => setBekraeft(false)} /></div>
         : <Knap label="Slet vagt" variant="fare" fuld onPress={() => setBekraeft(true)} />)}
-    </Ark>
+    </>
   );
 }

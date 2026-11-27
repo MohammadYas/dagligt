@@ -167,3 +167,26 @@ button.raekke:active { background: var(--card-2); }
 }
 .sted[aria-checked='true'] .sted__tjek { background: var(--accent); color: #00142e; box-shadow: none; }
 .sted:active .sted__tjek { transform: scale(0.9); }
+
+/* Save bar above the tabs */
+.gemlinje {
+  position: fixed; left: 0; right: 0; z-index: 30; margin: 0 auto; max-width: 720px;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 8px);
+  width: calc(100% - 2 * var(--gutter)); padding: 12px; border-radius: 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  background: rgba(44, 44, 46, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.gemlinje p { margin: 0; padding: 0 4px; }
+.gemlinje__knapper { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+
+/* Agencies */
+.bureauer { list-style: none; margin: 0; padding: 0; }
+.bureau { display: flex; flex-wrap: wrap; align-items: center; background: var(--card); position: relative; }
+.bureauer > .bureau + .bureau { border-top: 0.5px solid var(--line); }
+.bureau__greb { display: flex; align-items: center; justify-content: center; width: 40px; min-height: 56px; color: var(--faint); touch-action: none; cursor: grab; }
+.bureau__navn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 0; text-align: left; color: var(--text); }
+.bureau__knapper { display: flex; justify-content: flex-end; width: 100%; padding: 0 8px 6px 32px; }
+
+/* Field stacks inside groups */
+.felter { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
