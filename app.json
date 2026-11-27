@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Mo madhakka app",
+    "name": "VagtStatus",
     "slug": "mo-madhakka-app",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "dk.mo.madhakka",

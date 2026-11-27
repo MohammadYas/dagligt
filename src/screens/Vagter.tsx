@@ -1,601 +1,113 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator,
-  RefreshControl, Platform, AccessibilityInfo, Linking,
-} from 'react-native';
-import Animated, { FadeIn, SlideInDown, SlideOutDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { Theme } from '../theme';
-import { hentFil, hentStatus, gemFil, DropboxFejl, erOpsat } from '../dropbox';
-import {
-  Script, FILER, Oensker, Status, parseOensker,
-  parseStatus, tilstand, siden, medKatalog, serialiserMedSkabelon,
-  skiftDato as skiftDatoIOensker, saetDatoer as saetDatoerIOensker,
-} from '../vagter';
-import { alleNavne, SYGEMELDING } from '../steder';
-import { dayKey } from '../store';
-import { erWeb, adgangsHeader } from '../adgang';
-import { Type, Tal } from '../type';
-import Kalender from '../components/Kalender';
-import Stedliste from '../components/Stedliste';
-import Vaelger from '../components/Vaelger';
-import Puls from '../components/Puls';
-import RulleTal from '../components/RulleTal';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { View, Text, ScrollView, RefreshControl, useWindowDimensions } from 'react-native';
+import { Theme, dark as t } from '../theme';
+import { hentFil, hentStatus, gemFil, Fil } from '../dropbox';
+import { VagtSession } from '../vagtsession';
+import { FilKey, STIER } from '../vagtdata';
+import { FILER } from '../vagter';
+import type { Route } from '../../App';
+import { Action, Group, layout, LinkRow, Notice, Title, Toggle } from '../components/ArbejdeUI';
+import { Agencies, Pairs, Resource, Wishes } from '../components/vagter/Editors';
+import Statuskort from '../components/vagter/Statuskort';
+import RaStatusDialog from '../components/vagter/RaStatusDialog';
+import Varsler from '../components/vagter/Varsler';
 
-type Valg = 'cas' | 'torn' | 'begge';
-
-const MULIGHEDER: { key: Valg; navn: string }[] = [
-  { key: 'cas', navn: 'Cas' },
-  { key: 'torn', navn: 'Tørn' },
-  { key: 'begge', navn: 'Begge' },
-];
-
-const MONO = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
-
-// Noeglen er offentlig; den private ligger i Netlifys miljoevariabler.
-const VAPID_NOEGLE =
-  'BKmvDla7PtqzEEOyw72demraYLGOnQJfM2Q-XetL4jWd92lPoyfAg6Gj1qXisCBFG6gqfcBipPC0uZnG_RcjMlk';
-
-const VARSEL_TEKST: Record<string, string> = {
-  ukendt: 'Telefonen siger til, hvis Tørn ikke har meldt sig i tre minutter.',
-  afvist: 'Notifikationer er blokeret for appen. Slå dem til i telefonens indstillinger.',
-  afmeldt: 'Slået fra. Tænd for at få besked om en Tørn der tier.',
-  tilmeldt: 'Tændt. Du får besked når Tørn har været tavs i over tre minutter.',
-  fejl: 'Kunne ikke nå serveren. Prøv igen — luk og åbn evt. appen først.',
-};
-
-function vapidNoegle(base64: string): Uint8Array {
-  const w = globalThis as any;
-  const ren = base64.replace(/-/g, '+').replace(/_/g, '/');
-  const polstret = ren + '='.repeat((4 - (ren.length % 4)) % 4);
-  const raa = w.atob(polstret);
-  return new Uint8Array(raa.length).map((_, i) => raa.charCodeAt(i));
-}
-
-export default function Vagter({ t }: { t: Theme }) {
-  const [valg, setValg] = useState<Valg>('cas');
-  const [status, setStatus] = useState<Partial<Record<Script, Status>>>({});
-  const [oensker, setOensker] = useState<Oensker | null>(null);
-  const [henter, setHenter] = useState(true);
-  const [gemmer, setGemmer] = useState(false);
-  const [fejl, setFejl] = useState<string | null>(null);
-  const [aendret, setAendret] = useState(false);
-  const [visRaa, setVisRaa] = useState(false);
-  const [gemt, setGemt] = useState(false);
-  const [slag, setSlag] = useState(0);
-  const [daempet, setDaempet] = useState(false);
-  const [opsat, setOpsat] = useState(true);
-  const [varsel, setVarsel] = useState<'ukendt' | 'afvist' | 'tilmeldt' | 'afmeldt' | 'fejl'>(
-    'ukendt',
-  );
-
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setDaempet);
-    erOpsat().then(setOpsat);
-    const lyt = AccessibilityInfo.addEventListener('reduceMotionChanged', setDaempet);
-    return () => lyt.remove();
+export default function Vagter({ route, navigate }: { t: Theme; route: Route; navigate: (r: Route) => void }) {
+  const [session] = useState(() => new VagtSession(hentFil, gemFil));
+  useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
+  const [statuses, setStatuses] = useState<Partial<Record<'cas' | 'torn', { file?: Fil; error?: string }>>>({});
+  const [expandedStatus, setExpandedStatus] = useState<'cas' | 'torn' | null>(null);
+  const [rawStatus, setRawStatus] = useState<{ name: string; text: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [, tick] = useState(0);
+  const running = useRef(false), scroll = useRef<ScrollView>(null), forrigeRoute = useRef(route);
+  const { width, fontScale } = useWindowDimensions();
+  const refreshStatus = useCallback(async () => {
+    if (running.current) return;
+    running.current = true; setLoading(true);
+    await Promise.all((['cas', 'torn'] as const).map(async key => {
+      try {
+        const file = await hentStatus(FILER[key].status);
+        setStatuses(s => ({ ...s, [key]: { file } }));
+      } catch(e) { setStatuses(s => ({ ...s, [key]: { ...s[key], error: e instanceof Error ? e.message : 'Kunne ikke hente status.' } })); }
+    }));
+    running.current = false; setLoading(false);
   }, []);
-
-  // Laeser om telefonen allerede er tilmeldt push. Et abonnement der kun
-  // ligger paa telefonen sendes ogsaa til serveren, saa de ikke skilles.
+  const refresh = () => { refreshStatus(); (Object.keys(STIER) as FilKey[]).forEach(k => session.load(k)); };
   useEffect(() => {
-    if (!erWeb) return;
-    const w = globalThis as any;
-    if (!w.Notification || !('serviceWorker' in w.navigator)) {
-      setVarsel('afvist');
-      return;
+    refresh();
+    const interval = setInterval(refreshStatus, 60000);
+    const clock = setInterval(() => tick(v => v + 1), 15000);
+    const visible = () => {
+      if (document.visibilityState === 'visible') refreshStatus();
+      else if (session.dirtyKeys.length) void session.save();
+    };
+    const pageHide = () => { if (session.dirtyKeys.length) void session.save(); };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', visible);
+      window.addEventListener('pagehide', pageHide);
     }
-    (async () => {
-      if (w.Notification.permission === 'denied') {
-        setVarsel('afvist');
-        return;
+    return () => {
+      clearInterval(interval); clearInterval(clock);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', visible);
+        window.removeEventListener('pagehide', pageHide);
       }
-      try {
-        const reg = await w.navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-          setVarsel(w.Notification.permission === 'granted' ? 'afmeldt' : 'ukendt');
-          return;
-        }
-        setVarsel('tilmeldt');
-        await fetch('/api/push', {
-          method: 'POST',
-          headers: { ...adgangsHeader(), 'Content-Type': 'application/json' },
-          body: JSON.stringify(sub.toJSON()),
-        });
-      } catch {
-        setVarsel('fejl');
-      }
-    })();
-  }, []);
-
-  async function skiftVarsel() {
-    if (!erWeb) return;
-    const w = globalThis as any;
-
-    if (varsel === 'tilmeldt') {
-      try {
-        const reg = await w.navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
-        if (sub) {
-          await sub.unsubscribe();
-          await fetch('/api/push', { method: 'DELETE', headers: adgangsHeader() });
-        }
-        setVarsel('afmeldt');
-      } catch {
-        setVarsel('fejl');
-      }
-      return;
-    }
-
-    try {
-      // iOS kraever at sporgsmaalet kommer direkte fra et tryk.
-      const tilladelse = await w.Notification.requestPermission();
-      if (tilladelse !== 'granted') {
-        setVarsel('afvist');
-        return;
-      }
-      const reg = await w.navigator.serviceWorker.ready;
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: vapidNoegle(VAPID_NOEGLE),
-        });
-      }
-      const r = await fetch('/api/push', {
-        method: 'POST',
-        headers: { ...adgangsHeader(), 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub.toJSON()),
-      });
-      setVarsel(r.ok ? 'tilmeldt' : 'fejl');
-    } catch {
-      setVarsel('fejl');
-    }
-  }
-
-  const scripts: Script[] = valg === 'begge' ? ['cas', 'torn'] : [valg];
-  const kilde: Script = valg === 'torn' ? 'torn' : 'cas';
-
-  // Undgaa at et langsomt svar overskriver et nyere.
-  const koersel = useRef(0);
-
-  const hent = useCallback(
-    async (ogsaaOensker: boolean) => {
-      const mit = ++koersel.current;
-      setFejl(null);
-      try {
-        const nye: Partial<Record<Script, Status>> = {};
-        for (const sc of scripts) {
-          const f = await hentStatus(FILER[sc].status);
-          nye[sc] = parseStatus(f.tekst, f.skrevet);
-        }
-        if (mit !== koersel.current) return;
-        setStatus(nye);
-        setSlag((n) => n + 1);
-
-        if (ogsaaOensker) {
-          const raa = await hentFil(FILER[kilde].oensker);
-          if (mit !== koersel.current) return;
-          setOensker(medKatalog(parseOensker(raa), alleNavne()));
-          setAendret(false);
-        }
-      } catch (e) {
-        if (mit !== koersel.current) return;
-        setFejl(e instanceof DropboxFejl ? e.besked : 'Kunne ikke nå Dropbox.');
-      } finally {
-        if (mit === koersel.current) setHenter(false);
-      }
-    },
-    [valg],
-  );
-
+    };
+  }, [refreshStatus, session]);
   useEffect(() => {
-    setHenter(true);
-    hent(true);
-  }, [valg]);
-
+    scroll.current?.scrollTo({ y: 0, animated: false });
+    // Skift af skaerm maa ikke efterlade booking-kriterier som en glemt kladde.
+    if (forrigeRoute.current !== route && session.dirtyKeys.length) void session.save();
+    forrigeRoute.current = route;
+  }, [route, session]);
+  const dirty = session.dirtyKeys.length > 0;
   useEffect(() => {
-    const id = setInterval(() => hent(false), 60000);
-    return () => clearInterval(id);
-  }, [hent]);
-
-  function skiftDato(dato: string) {
-    setOensker((o) => (o ? skiftDatoIOensker(o, dato) : o));
-    setAendret(true);
-  }
-
-  function saetDatoer(datoer: string[]) {
-    setOensker((o) => (o ? saetDatoerIOensker(o, datoer) : o));
-    setAendret(true);
-  }
-
-  function vaelgDage(antal: number) {
-    Haptics.selectionAsync();
-    const ud: string[] = [];
-    const d = new Date();
-    for (let i = 0; i < antal; i++) {
-      ud.push(dayKey(d));
-      d.setDate(d.getDate() + 1);
-    }
-    saetDatoer(ud);
-  }
-
-  function skiftSted(navn: string) {
-    setOensker((o) =>
-      o ? { ...o, steder: o.steder.map((x) => (x.navn === navn ? { ...x, aktiv: !x.aktiv } : x)) } : o,
-    );
-    setAendret(true);
-  }
-
-  function saetGruppe(navne: string[], aktiv: boolean) {
-    const sat = new Set(navne);
-    setOensker((o) =>
-      o ? { ...o, steder: o.steder.map((x) => (sat.has(x.navn) ? { ...x, aktiv } : x)) } : o,
-    );
-    setAendret(true);
-  }
-
-  async function gem() {
-    if (!oensker) return;
-    setGemmer(true);
-    setFejl(null);
-    try {
-      const maal: Script[] = valg === 'begge' ? ['cas', 'torn'] : [valg];
-      for (const sc of maal) {
-        // Hentes paa ny lige foer skrivning: filen bruges som skabelon, saa
-        // dens kommentarer bevares, og scriptets egne rettelser ikke tabes.
-        const nuvaerende = await hentFil(FILER[sc].oensker);
-        await gemFil(FILER[sc].oensker, serialiserMedSkabelon(nuvaerende, oensker));
-      }
-      setAendret(false);
-      // Kvitteringen hoerer til i bjaelken der lige har gjort arbejdet,
-      // ikke i en dialog man skal klikke vaek.
-      setGemt(true);
-      setTimeout(() => setGemt(false), 2600);
-    } catch (e) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setFejl(e instanceof DropboxFejl ? e.besked : 'Kunne ikke gemme til Dropbox.');
-    } finally {
-      setGemmer(false);
-    }
-  }
-
-  const aktiveSteder = oensker?.steder.filter((x) => x.aktiv).length ?? 0;
-
-  return (
-    <View style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[s.pad, aendret && { paddingBottom: 108 }]}
-        refreshControl={
-          <RefreshControl refreshing={false} onRefresh={() => hent(true)} tintColor={t.accent} />
-        }
-      >
-        <Vaelger muligheder={MULIGHEDER} valgt={valg} vaelg={setValg} t={t} daempet={daempet} />
-
-        <Text style={[s.h1, { color: t.faint }]}>Auto Vagt</Text>
-
-        {!opsat ? (
-          <Fejllinje t={t} tekst="Dropbox er ikke sat op. Indtast nøglerne under Projekter." />
-        ) : null}
-        {fejl ? <Fejllinje t={t} tekst={fejl} /> : null}
-
-        {henter ? (
-          <ActivityIndicator color={t.accent} style={s.spinner} />
-        ) : (
-          <>
-            {scripts.map((sc) => (
-              <Statuslinje
-                key={sc}
-                t={t}
-                navn={FILER[sc].navn}
-                status={status[sc]}
-                slag={slag}
-                daempet={daempet}
-              />
-            ))}
-
-            <Pressable onPress={() => setVisRaa((v) => !v)} hitSlop={10} style={s.raaKnap}>
-              <Text style={[s.raaKnapTekst, { color: t.faint }]}>
-                {visRaa ? 'Skjul filen' : 'Vis filen'}
-              </Text>
-            </Pressable>
-
-            {visRaa
-              ? scripts.map((sc) =>
-                  status[sc] ? (
-                    <Animated.Text
-                      key={sc}
-                      entering={daempet ? undefined : FadeIn.duration(150)}
-                      style={[s.raa, { color: t.dim }]}
-                    >
-                      {status[sc]!.raa.trim()}
-                    </Animated.Text>
-                  ) : null,
-                )
-              : null}
-
-            {erWeb ? (
-              <View style={s.varsel}>
-                <View style={s.varselKasse}>
-                  <Text style={[s.varselTitel, { color: t.text }]}>Varsel når Tørn tier</Text>
-                  <Text style={[s.varselForklaring, { color: t.faint }]}>
-                    {VARSEL_TEKST[varsel]}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={skiftVarsel}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    s.varselKnap,
-                    { borderColor: t.line, opacity: pressed ? 0.5 : 1 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      s.varselKnapTekst,
-                      { color: varsel === 'tilmeldt' ? t.accent : t.dim },
-                    ]}
-                  >
-                    {varsel === 'tilmeldt' ? 'Sluk' : 'Tænd'}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : null}
-
-            <Overskrift
-              t={t}
-              tekst="Dage"
-              hoejre={
-                oensker?.datoer.length ? oensker.datoer.length + ' valgt' : 'alle datoer tillades'
-              }
-            />
-
-            <View style={s.genveje}>
-              <Genvej t={t} tekst="7 frem" tryk={() => vaelgDage(7)} />
-              <Genvej t={t} tekst="14 frem" tryk={() => vaelgDage(14)} />
-              <Genvej
-                t={t}
-                tekst="Ryd"
-                tryk={() => {
-                  Haptics.selectionAsync();
-                  saetDatoer([]);
-                }}
-              />
-            </View>
-
-            {oensker ? (
-              <Kalender valgte={oensker.datoer} skift={skiftDato} t={t} daempet={daempet} />
-            ) : null}
-
-            <Overskrift
-              t={t}
-              tekst="Steder"
-              hoejre={aktiveSteder + ' af ' + (oensker?.steder.length ?? 0)}
-            />
-
-            {oensker ? (
-              <Stedliste
-                steder={oensker.steder}
-                skift={skiftSted}
-                saetGruppe={saetGruppe}
-                t={t}
-                daempet={daempet}
-              />
-            ) : null}
-
-            <Overskrift t={t} tekst="Sygemelding" hoejre={SYGEMELDING.telefon} />
-
-            {SYGEMELDING.frister.map((f) => (
-              <View key={f.vagt} style={s.frist}>
-                <Text style={[s.fristVagt, { color: t.dim }]}>{f.vagt}</Text>
-                <Text style={[s.fristTid, { color: t.text }]}>senest {f.senest}</Text>
-              </View>
-            ))}
-
-            <Pressable
-              onPress={() => Linking.openURL('tel:' + SYGEMELDING.telefon.replace(/\s/g, ''))}
-              style={s.ring}
-            >
-              <Text style={[s.ringTekst, { color: t.accent }]}>Ring {SYGEMELDING.telefon}</Text>
-            </Pressable>
-
-            <Text style={[s.fod, { color: t.faint }]}>
-              Vagter starter mellem 15 og 23. Aldrig to samme dag.
-            </Text>
-          </>
-        )}
-      </ScrollView>
-
-      {aendret || gemt ? (
-        <Animated.View
-          entering={daempet ? FadeIn.duration(120) : SlideInDown.duration(240).springify().damping(21)}
-          exiting={daempet ? undefined : SlideOutDown.duration(150)}
-          style={[s.bjaelke, { backgroundColor: t.bg, borderTopColor: t.line }]}
-        >
-          <Text style={[s.bjaelkeTekst, { color: gemt ? t.done : t.dim }]}>
-            {gemt
-              ? 'Gemt. Scripterne genlæser inden for 5 minutter.'
-              : (oensker?.datoer.length ?? 0) + ' dage · ' + aktiveSteder + ' steder'}
-          </Text>
-          {gemt ? null : (
-          <Pressable
-            onPress={gem}
-            disabled={gemmer}
-            style={[s.gem, { backgroundColor: t.accent, opacity: gemmer ? 0.6 : 1 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Gem til Dropbox"
-          >
-            {gemmer ? (
-              <ActivityIndicator color={t.bg} size="small" />
-            ) : (
-              <Text style={[s.gemTekst, { color: t.bg }]}>Gem</Text>
-            )}
-          </Pressable>
-          )}
-        </Animated.View>
-      ) : null}
-    </View>
-  );
-}
-
-function Statuslinje({
-  t, navn, status, slag, daempet,
-}: { t: Theme; navn: string; status?: Status; slag: number; daempet: boolean }) {
-  if (!status) return null;
-  const tl = tilstand(status);
-  const farve = tl === 'ok' ? t.done : tl === 'advarsel' ? t.advarsel : t.fejl;
-  const ord = tl === 'ok' ? 'kører' : tl === 'advarsel' ? 'melder ikke' : 'stoppet';
-
-  // Linjerne vises ordret: scripterne skriver fordelingen, appen gentager.
-  const linjer = status.raa.split(/\r?\n/).map((l) => l.trim());
-  const bureauer = linjer.find((l) => /^Arbejdspladser/i.test(l));
-  const fordeling = linjer.find((l) => /^Ledige vagter/i.test(l));
-
-  return (
-    <View style={s.status}>
-      <View style={s.statusTop}>
-        <Puls farve={farve} slag={slag} daempet={daempet} />
-        <Text style={[s.statusNavn, { color: t.text }]}>
-          {navn} <Text style={{ color: farve }}>{ord}</Text>
-        </Text>
-        <Text style={[s.statusTid, { color: t.faint }]}>{siden(status.sidsteTjek)}</Text>
+    if (!dirty || typeof window === 'undefined') return;
+    const leave = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', leave);
+    return () => window.removeEventListener('beforeunload', leave);
+  }, [dirty]);
+  const control = session.get('kontrol').draft;
+  const titles: Partial<Record<Route,string>> = { oensker: 'Dage og steder', bureauer: 'Arbejdspladser', par: 'Stednavne-par' };
+  return <View style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+    <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={layout.page} keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={t.accent} />}>
+      <Title title={titles[route] ?? 'Vagter'} subtitle={route === 'vagter' ? 'Dit overblik over CAS og TØRN.' : undefined} back={route !== 'vagter' ? () => navigate('vagter') : undefined} backLabel="Vagter" />
+      {route === 'vagter' ? <>
+        <View style={{ flexDirection: width >= 620 && fontScale < 1.4 ? 'row' : 'column', alignItems: 'flex-start', gap: 16 }}>
+          <View style={{ flex: width >= 620 && fontScale < 1.4 ? 1 : undefined, width: width >= 620 && fontScale < 1.4 ? undefined : '100%', minWidth: 0 }}>
+            <Statuskort name="CAS" file={statuses.cas?.file} error={statuses.cas?.error} loading={loading} enabled={control?.cas} expanded={expandedStatus === 'cas'} onToggle={() => setExpandedStatus(v => v === 'cas' ? null : 'cas')} onViewRaw={(name, text) => setRawStatus({ name, text })} />
+          </View>
+          <View style={{ flex: width >= 620 && fontScale < 1.4 ? 1 : undefined, width: width >= 620 && fontScale < 1.4 ? undefined : '100%', minWidth: 0 }}>
+            <Statuskort name="TØRN" file={statuses.torn?.file} error={statuses.torn?.error} loading={loading} enabled={control?.torn} expanded={expandedStatus === 'torn'} onToggle={() => setExpandedStatus(v => v === 'torn' ? null : 'torn')} onViewRaw={(name, text) => setRawStatus({ name, text })} />
+          </View>
+        </View>
+        <Action label="Opdater" icon="refresh-outline" onPress={refresh} busy={loading} />
+        <Group title="Automatisk booking" help="Slået fra betyder: scanner stadig, men tager ingen vagter. Ændringer gælder først, når du trykker Gem.">
+          <Resource session={session} id="kontrol">{control && <>
+            <Toggle label="CAS tændt" value={control.cas} disabled={session.saving} onChange={cas => session.edit('kontrol', { ...control, cas })} />
+            <View style={layout.separator}><Toggle label="TØRN tændt" value={control.torn} disabled={session.saving} onChange={torn => session.edit('kontrol', { ...control, torn })} /></View>
+          </>}</Resource>
+        </Group>
+        <Group title="Dine vagtvalg">
+          <LinkRow first title="Dage og steder" detail="Hvornår og hvor du vil arbejde" icon="calendar-outline" onPress={() => navigate('oensker')} />
+          <LinkRow title="Arbejdspladser" detail="Aktive arbejdspladser og prioritet" icon="business-outline" onPress={() => navigate('bureauer')} />
+          <LinkRow title="Stednavne-par" detail="Forbind forskellige navne på samme sted" icon="link-outline" onPress={() => navigate('par')} />
+        </Group>
+        <Varsler />
+        <Text style={[layout.caption, { textAlign: 'center' }]}>VagtStatus · CAS & TØRN</Text>
+      </> : route === 'oensker' ? <Wishes session={session} /> : route === 'bureauer' ? <Agencies session={session} /> : <Pairs session={session} />}
+    </ScrollView>
+    {(dirty || session.message || session.error) && <View style={{ backgroundColor: t.card, borderTopWidth: 1, borderTopColor: t.line }}>
+      <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+        {session.error ? <Notice error text={session.error} /> : <Notice text={session.saving ? 'Gemmer dine ændringer…' : dirty ? 'Du har ugemte ændringer' : session.message} />}
+        {dirty && <View style={{ flexDirection: width < 360 && fontScale > 1.2 ? 'column' : 'row', gap: 8 }}>
+          <View style={{ flex: 1 }}><Action label="Annuller" onPress={() => session.cancel()} disabled={session.saving} /></View>
+          <View style={{ flex: 2 }}><Action label={session.error ? 'Prøv igen' : 'Gem ændringer'} primary busy={session.saving} onPress={() => session.save()} /></View>
+        </View>}
       </View>
-
-      <View style={s.tal}>
-        <Maaling t={t} navn="ledige" v={status.ledige ?? '–'} daempet={daempet} />
-        <Maaling
-          t={t}
-          navn="matcher"
-          v={status.matcher ?? '–'}
-          daempet={daempet}
-          fremhaev={Boolean(status.matcher)}
-        />
-        <Maaling t={t} navn="taget" v={status.taget ?? '–'} daempet={daempet} />
-        {status.fejl > 0 ? (
-          <Maaling t={t} navn="fejl" v={status.fejl} daempet={daempet} fremhaev />
-        ) : null}
-      </View>
-
-      {bureauer ? <Text style={[s.dine, { color: t.dim }]}>{bureauer}</Text> : null}
-
-      {fordeling ? <Text style={[s.dine, { color: t.dim }]}>{fordeling}</Text> : null}
-
-      {status.dine && status.dine.toLowerCase() !== 'ingen' ? (
-        <Text
-          style={[s.dine, { color: /fejl|ukendt/i.test(status.dine) ? t.advarsel : t.accent }]}
-        >
-          Dine vagter: {status.dine}
-        </Text>
-      ) : null}
-
-      {status.mode ? <Text style={[s.mode, { color: t.faint }]}>{status.mode}</Text> : null}
-    </View>
-  );
+    </View>}
+    {rawStatus && <RaStatusDialog name={rawStatus.name} text={rawStatus.text} onClose={() => setRawStatus(null)} />}
+  </View>;
 }
-
-function Maaling({
-  t, navn, v, daempet, fremhaev,
-}: { t: Theme; navn: string; v: string | number; daempet: boolean; fremhaev?: boolean }) {
-  return (
-    <View style={s.maaling}>
-      <RulleTal
-        vaerdi={v}
-        daempet={daempet}
-        stil={[s.maalingTal, { color: fremhaev ? t.accent : t.text }]}
-      />
-      <Text style={[s.maalingNavn, { color: t.faint }]}>{navn}</Text>
-    </View>
-  );
-}
-
-function Overskrift({ t, tekst, hoejre }: { t: Theme; tekst: string; hoejre?: string }) {
-  return (
-    <View style={s.overskrift}>
-      <Text style={[s.overskriftTekst, { color: t.text }]}>{tekst}</Text>
-      {hoejre ? <Text style={[s.overskriftHoejre, { color: t.faint }]}>{hoejre}</Text> : null}
-    </View>
-  );
-}
-
-function Genvej({ t, tekst, tryk }: { t: Theme; tekst: string; tryk: () => void }) {
-  return (
-    <Pressable
-      onPress={tryk}
-      style={({ pressed }) => [s.genvej, { borderColor: t.line, opacity: pressed ? 0.5 : 1 }]}
-    >
-      <Text style={[s.genvejTekst, { color: t.dim }]}>{tekst}</Text>
-    </Pressable>
-  );
-}
-
-function Fejllinje({ t, tekst }: { t: Theme; tekst: string }) {
-  return (
-    <View style={s.fejl}>
-      <Text style={[s.fejlMaerkat, { color: t.fejl }]}>Fejl</Text>
-      <Text style={[s.fejlTekst, { color: t.text }]}>{tekst}</Text>
-    </View>
-  );
-}
-
-const s = StyleSheet.create({
-  pad: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 44 },
-  h1: { ...Type.caption1, marginBottom: 14, marginTop: 2 },
-  spinner: { marginTop: 60 },
-
-  status: { paddingBottom: 20 },
-  statusTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusNavn: { ...Type.title2, flex: 1 },
-  statusTid: { ...Type.caption1 },
-
-  tal: { flexDirection: 'row', marginTop: 12, gap: 30 },
-  maaling: {},
-  maalingTal: { ...Type.title1, ...Tal },
-  maalingNavn: { ...Type.caption2, marginTop: 2 },
-  dine: { ...Type.subhead, fontWeight: '600', marginTop: 12 },
-  mode: { ...Type.caption1, marginTop: 12 },
-
-  raaKnap: { paddingVertical: 6, marginBottom: 10 },
-  raaKnapTekst: { ...Type.footnote },
-  raa: { fontFamily: MONO, fontSize: 11, lineHeight: 16, marginBottom: 14 },
-
-  varsel: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6, marginBottom: 4 },
-  varselKasse: { flex: 1 },
-  varselTitel: { ...Type.subhead, fontWeight: '600' },
-  varselForklaring: { ...Type.caption1, marginTop: 2 },
-  varselKnap: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, borderWidth: 1 },
-  varselKnapTekst: { ...Type.footnote },
-
-  overskrift: {
-    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-    marginTop: 26, marginBottom: 12,
-  },
-  overskriftTekst: { ...Type.title3 },
-  overskriftHoejre: { ...Type.footnote, ...Tal },
-
-  genveje: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  genvej: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
-  genvejTekst: { ...Type.footnote },
-
-  frist: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 },
-  fristVagt: { ...Type.subhead },
-  fristTid: { ...Type.subhead, ...Tal },
-  ring: { paddingVertical: 12 },
-  ringTekst: { ...Type.callout, fontWeight: '600' },
-
-  fod: { ...Type.caption1, marginTop: 22 },
-
-  fejl: { flexDirection: 'row', gap: 9, marginBottom: 16, alignItems: 'baseline' },
-  fejlMaerkat: { ...Type.footnote, fontWeight: '700' },
-  fejlTekst: { ...Type.footnote, flex: 1 },
-
-  bjaelke: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 22, paddingTop: 14, paddingBottom: 18, borderTopWidth: 1,
-  },
-  bjaelkeTekst: { ...Type.footnote, ...Tal },
-  gem: { minWidth: 96, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  gemTekst: { ...Type.callout, fontWeight: '600' },
-});

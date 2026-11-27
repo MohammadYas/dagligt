@@ -15,13 +15,9 @@ export type Theme = {
 };
 
 /**
- * Én kulør baerer al interaktion: petroleum. Den er valgt fordi den kan
- * staa ved siden af de tre tilstandsfarver uden at forveksles med nogen —
- * graesgroen betyder koerer, okker betyder tavs, teglroed betyder stoppet.
- * Farve optraeder ikke andre steder end de fire.
- *
- * Baggrundene er varme neutraler frem for hvidt og sort; en skaerm der
- * laeses kl. 5 om morgenen skal ikke lyse som papir.
+ * Legacy light palette remains available to retained, inactive screens.
+ * VagtStatus uses dark: black canvas, raised neutral groups, blue actions,
+ * and distinct green/amber/red signals always accompanied by text.
  */
 export const light: Theme = {
   bg: '#F3F1EC',
@@ -40,17 +36,17 @@ export const light: Theme = {
 };
 
 export const dark: Theme = {
-  bg: '#131211',
-  card: '#1C1B19',
-  cardAlt: '#252320',
-  text: '#F0EEE8',
-  dim: '#A8A49B',
-  faint: '#8C887F',
-  line: '#312E2A',
-  accent: '#6FB8BC',
-  accentBg: '#17322F',
-  accentText: '#9FD3D5',
-  done: '#93B84E',
-  advarsel: '#D19A3C',
-  fejl: '#E0705F',
+  bg: '#000000',
+  card: '#1C1C1E',
+  cardAlt: '#2C2C2E',
+  text: '#F5F5F7',
+  dim: '#C5C5CC',
+  faint: '#A1A1AA',
+  line: '#48484A',
+  accent: '#64A8FF',
+  accentBg: '#142D4D',
+  accentText: '#C1DCFF',
+  done: '#5DDB83',
+  advarsel: '#FFD06A',
+  fejl: '#FF827B',
 };

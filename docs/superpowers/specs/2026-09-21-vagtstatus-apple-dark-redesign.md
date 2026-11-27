@@ -1,7 +1,7 @@
 # VagtStatus Apple Dark redesign
 
 **Dato:** 2026-09-21  
-**Status:** Godkendt design, klar til implementeringsplan
+**Status:** Implementeret lokalt; verifikation og platformgrænser findes i ../../../DESIGN.md
 
 ## Formaal
 
@@ -109,7 +109,7 @@ Aendringer er kladder, indtil brugeren trykker `Gem ændringer`.
 
 ```text
 CAS: ON
-TOERN: OFF
+TØRN: OFF
 ```
 
 Systemerne kan skiftes uafhaengigt.

@@ -43,7 +43,7 @@ self.addEventListener('message', (e) => {
   if (e.data === 'opdater') self.skipWaiting();
 });
 
-// Varsel naar Toern-scripter tier. Selve tjekket ligger i en
+// Varsel naar CAS-scriptet tier. Selve tjekket ligger i en
 // Netlify-funktion der sender push; her vises kun beskeden.
 self.addEventListener('push', (e) => {
   let data = {};
@@ -56,7 +56,7 @@ self.addEventListener('push', (e) => {
       body: data.tekst ?? '',
       icon: '/ikoner/ikon-192.png',
       badge: '/ikoner/ikon-192.png',
-      tag: 'torn-tavs',
+      tag: 'cas-tavs',
     }),
   );
 });

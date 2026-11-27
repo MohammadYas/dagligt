@@ -2,7 +2,7 @@
  * Gemmer og fjerner telefonens push-abonnement.
  *
  * Abonnementet ligger i Dropbox, saa den planlagte funktion tjek_torn kan
- * sende varsler naar Toern-scripter tier. Browseren sender kun sit
+ * sende varsler naar CAS-scriptet tier. Browseren sender kun sit
  * abonnement hertil; noeglerne til at sende med bor i miljoevariablerne.
  */
 import { harAdgang, AFVIST } from './_adgang.mjs';

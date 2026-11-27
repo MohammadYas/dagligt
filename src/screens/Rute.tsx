@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView, StyleSheet, ActivityIndicator,
-  Linking, AccessibilityInfo, Alert,
+  Linking, AccessibilityInfo,
 } from 'react-native';
 import Animated, {
   FadeIn, LinearTransition, useSharedValue, useAnimatedStyle, withSpring,
 } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
 import { Type, Tal } from '../type';
@@ -15,6 +15,7 @@ import { soeg, Forslag } from '../dawa';
 import { Stop, Rute as RuteType, planlaeg, kortLinks, tid, afstand } from '../rute';
 import { uid } from '../store';
 import { hentPlacering, forklar, Tilstand } from '../placering';
+import { Action, IconButton, Title, layout, Notice } from '../components/ArbejdeUI';
 
 export default function Rute({ t }: { t: Theme }) {
   const [q, setQ] = useState('');
@@ -27,17 +28,23 @@ export default function Rute({ t }: { t: Theme }) {
   const [daempet, setDaempet] = useState(false);
   const [start, setStart] = useState<Tilstand>('ukendt');
   const [startPunkt, setStartPunkt] = useState<Stop | null>(null);
+  const [bekraeftRyd, setBekraeftRyd] = useState(false);
+  const [soegeFejl, setSoegeFejl] = useState('');
+  const revision = useRef(0);
 
   const afbryd = useRef<AbortController | null>(null);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setDaempet);
-    brugPlacering();
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setDaempet);
+    return () => subscription.remove();
   }, []);
 
   async function brugPlacering() {
+    revision.current++;
     setStart('henter');
     const svar = await hentPlacering();
+    revision.current++;
     setStart(svar.tilstand);
     setStartPunkt(
       svar.punkt
@@ -48,6 +55,10 @@ export default function Rute({ t }: { t: Theme }) {
   }
 
   useEffect(() => {
+    afbryd.current?.abort();
+    let current = true;
+    setSoeger(false);
+    setSoegeFejl('');
     if (q.trim().length < 3) {
       setForslag([]);
       return;
@@ -58,17 +69,19 @@ export default function Rute({ t }: { t: Theme }) {
       afbryd.current = ctrl;
       setSoeger(true);
       try {
-        setForslag(await soeg(q, ctrl.signal));
+        const found = await soeg(q, ctrl.signal);
+        if (current) { setForslag(found); if (!found.length) setSoegeFejl('Ingen adresser fundet. Prøv vejnavn, husnummer og by.'); }
       } catch {
-        // Afbrudt eller uden net. Listen bliver bare staaende.
+        if (current && !ctrl.signal.aborted) setSoegeFejl('Kunne ikke søge efter adresser. Tjek forbindelsen, og prøv igen.');
       } finally {
-        setSoeger(false);
+        if (current) setSoeger(false);
       }
     }, 220);
-    return () => clearTimeout(id);
+    return () => { current = false; clearTimeout(id); afbryd.current?.abort(); };
   }, [q]);
 
   function tilfoej(f: Forslag) {
+    revision.current++;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setStop((s) => [...s, { id: uid(), tekst: f.tekst, lon: f.lon, lat: f.lat }]);
     setQ('');
@@ -77,39 +90,43 @@ export default function Rute({ t }: { t: Theme }) {
   }
 
   function fjern(id: string) {
+    revision.current++;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setStop((s) => s.filter((x) => x.id !== id));
     setRute(null);
   }
 
   function ryd() {
-    Alert.alert('Ryd listen?', `${stop.length} adresser forsvinder.`, [
-      { text: 'Behold', style: 'cancel' },
-      {
-        text: 'Ryd',
-        style: 'destructive',
-        onPress: () => {
-          setStop([]);
-          setRute(null);
-        },
-      },
-    ]);
+    setBekraeftRyd(true);
+  }
+
+  function flyt(index: number, delta: number) {
+    const to = index + delta;
+    if (to < 0 || to >= stop.length) return;
+    revision.current++;
+    setStop(rows => { const next = [...rows]; next.splice(to, 0, next.splice(index, 1)[0]); return next; });
+    setRute(null);
   }
 
   async function planlaegRute() {
-    if (stop.length < 2) return;
+    if (stop.length < 2 || planlaegger) return;
+    const version = revision.current;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setPlanlaegger(true);
     setFejl(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
     try {
       const medStart = startPunkt ? [startPunkt, ...stop] : stop;
-      const r = await planlaeg(medStart);
+      const r = await planlaeg(medStart, controller.signal);
+      if (revision.current !== version) return;
       setRute(r);
       // Startpunktet hoerer ikke til i adresselisten; den viser stederne.
       setStop(r.orden.filter((x) => x.id !== 'mig'));
     } catch (e) {
       setFejl(e instanceof Error ? e.message : 'Kunne ikke beregne ruten.');
     } finally {
+      clearTimeout(timeout);
       setPlanlaegger(false);
     }
   }
@@ -120,13 +137,15 @@ export default function Rute({ t }: { t: Theme }) {
     <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[s.pad, rute && { paddingBottom: 112 }]}
+        contentContainerStyle={s.pad}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[s.h1, { color: t.text }]}>Rute</Text>
+        <Title title="Rute" subtitle="Fra første stop til fyraften." />
 
         <View style={s.soegRum}>
+          <Text style={[layout.secondary, { marginBottom: 8 }]}>Tilføj en adresse</Text>
           <TextInput
+            accessibilityLabel="Søg efter adresse"
             style={[s.felt, { backgroundColor: t.card, color: t.text, borderColor: t.line }]}
             placeholder="Vej og husnummer"
             placeholderTextColor={t.faint}
@@ -138,12 +157,15 @@ export default function Rute({ t }: { t: Theme }) {
           />
           {soeger ? <ActivityIndicator color={t.faint} style={s.spinner} size="small" /> : null}
         </View>
+        {soegeFejl ? <Notice text={soegeFejl} /> : null}
 
         {forslag.length > 0 ? (
           <Animated.View entering={daempet ? undefined : FadeIn.duration(140)} style={s.forslag}>
             {forslag.map((f) => (
               <Pressable
                 key={f.tekst}
+                accessibilityRole="button"
+                accessibilityLabel={'Tilføj ' + f.tekst}
                 onPress={() => tilfoej(f)}
                 style={({ pressed }) => [
                   s.forslagRaekke,
@@ -167,9 +189,11 @@ export default function Rute({ t }: { t: Theme }) {
         ) : null}
 
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Brug min placering som startpunkt"
           onPress={brugPlacering}
           disabled={start === 'henter'}
-          style={[s.start, { borderTopColor: t.line }]}
+          style={[s.start, { borderTopColor: t.line, backgroundColor: t.card }]}
         >
           <View style={[s.startPrik, { borderColor: startPunkt ? t.accent : t.faint }]}>
             {startPunkt ? <View style={[s.startKerne, { backgroundColor: t.accent }]} /> : null}
@@ -192,16 +216,21 @@ export default function Rute({ t }: { t: Theme }) {
           <View style={s.hoejre}>
             <Text style={[s.antal, { color: t.faint }]}>{stop.length}</Text>
             {stop.length > 0 ? (
-              <Pressable onPress={ryd} hitSlop={8}>
+              <Pressable onPress={ryd} accessibilityRole="button" style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}>
                 <Text style={[s.ryd, { color: t.faint }]}>Ryd</Text>
               </Pressable>
             ) : null}
           </View>
         </View>
+        {bekraeftRyd && <View style={{ gap: 8, padding: 16, backgroundColor: t.card, borderRadius: 16 }}>
+          <Notice text={'Fjern alle ' + stop.length + ' adresser fra ruten?'} />
+          <Action label="Behold adresser" onPress={() => setBekraeftRyd(false)} />
+          <Action label="Fjern alle adresser" danger onPress={() => { revision.current++; setStop([]); setRute(null); setBekraeftRyd(false); }} />
+        </View>}
 
         {stop.length === 0 ? (
           <Text style={[s.tom, { color: t.faint }]}>
-            Skriv adresserne ind som de står på listen. Rækkefølgen er ligegyldig.
+            Tilføj mindst to adresser for at planlægge din arbejdsrute. Du kan bruge din placering som startpunkt.
           </Text>
         ) : (
           <Animated.View layout={daempet ? undefined : LinearTransition.duration(260)}>
@@ -213,12 +242,16 @@ export default function Rute({ t }: { t: Theme }) {
                 sidste={i === stop.length - 1}
                 planlagt={Boolean(rute)}
                 fjern={() => fjern(x.id)}
+                op={() => flyt(i, -1)}
+                ned={() => flyt(i, 1)}
+                foerste={i === 0}
                 t={t}
                 daempet={daempet}
               />
             ))}
           </Animated.View>
         )}
+        {stop.length > 0 && <Text style={[layout.caption, { marginTop: 12 }]}>Første og sidste stop fastholdes. Flyt dem med pilene, før du beregner ruten.</Text>}
 
         {fejl ? <Text style={[s.fejl, { color: t.fejl }]}>{fejl}</Text> : null}
 
@@ -253,6 +286,7 @@ export default function Rute({ t }: { t: Theme }) {
               <View style={s.knapper}>
                 {links.map((url, i) => (
                   <Pressable
+                    accessibilityRole="button"
                     key={url}
                     onPress={() => Linking.openURL(url)}
                     style={[s.knap, { backgroundColor: t.accent }]}
@@ -271,6 +305,7 @@ export default function Rute({ t }: { t: Theme }) {
                 {stop.length} adresser · ikke planlagt
               </Text>
               <Pressable
+                accessibilityRole="button"
                 onPress={planlaegRute}
                 disabled={planlaegger}
                 style={[s.knap, { backgroundColor: t.accent, opacity: planlaegger ? 0.6 : 1 }]}
@@ -290,16 +325,17 @@ export default function Rute({ t }: { t: Theme }) {
 }
 
 function Stoprakke({
-  nummer, stop, sidste, planlagt, fjern, t, daempet,
+  nummer, stop, sidste, planlagt, fjern, t, daempet, op, ned, foerste,
 }: {
   nummer: number; stop: Stop; sidste: boolean; planlagt: boolean;
   fjern: () => void; t: Theme; daempet: boolean;
+  op: () => void; ned: () => void; foerste: boolean;
 }) {
   const skala = useSharedValue(0.9);
 
   useEffect(() => {
-    skala.value = withSpring(1, planlagt ? smooth : snappy);
-  }, [planlagt]);
+    skala.value = daempet ? 1 : withSpring(1, planlagt ? smooth : snappy);
+  }, [planlagt, daempet]);
 
   const stil = useAnimatedStyle(() => ({ transform: [{ scale: skala.value }] }));
 
@@ -325,31 +361,33 @@ function Stoprakke({
       <View style={s.indhold}>
         <Text style={[s.vej, { color: t.text }]}>{vej}</Text>
         <Text style={[s.rest, { color: t.faint }]}>{rest}</Text>
+        <View style={{ flexDirection: 'row', marginTop: 4 }}>
+          <IconButton name="arrow-up" label={'Flyt ' + vej + ' op'} disabled={foerste} onPress={op} />
+          <IconButton name="arrow-down" label={'Flyt ' + vej + ' ned'} disabled={sidste} onPress={ned} />
+        </View>
       </View>
 
-      <Pressable onPress={fjern} hitSlop={10} accessibilityLabel={'Fjern ' + vej}>
-        <Ionicons name="close" size={18} color={t.faint} />
-      </Pressable>
+      <IconButton name="close" label={'Fjern ' + vej} onPress={fjern} danger />
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  pad: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 44 },
+  pad: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 28, width: '100%', maxWidth: 720, alignSelf: 'center' },
   h1: { ...Type.title1, marginBottom: 14 },
 
-  soegRum: { justifyContent: 'center' },
+  soegRum: { justifyContent: 'center', marginTop: 28 },
   felt: {
-    height: 46, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, ...Type.body,
+    minHeight: 52, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12, ...Type.body,
   },
   spinner: { position: 'absolute', right: 14 },
 
-  forslag: { marginTop: 10 },
+  forslag: { marginTop: 10, borderRadius: 14, overflow: 'hidden' },
   forslagRaekke: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderTopWidth: 1 },
   forslagKort: { ...Type.callout },
   forslagBy: { ...Type.caption1, marginTop: 1 },
 
-  start: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15, borderTopWidth: 1, marginTop: 26 },
+  start: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, marginTop: 26 },
   startPrik: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   startKerne: { width: 9, height: 9, borderRadius: 5 },
   startNavn: { ...Type.callout, fontWeight: '600' },
@@ -375,12 +413,12 @@ const s = StyleSheet.create({
   perleTal: { ...Type.caption1, ...Tal, fontWeight: '600' },
   streg: { width: 1, flex: 1, minHeight: 22, marginTop: 3 },
 
-  indhold: { flex: 1, paddingBottom: 15 },
+  indhold: { flex: 1, minWidth: 0, paddingBottom: 15 },
   vej: { ...Type.callout, fontWeight: '600' },
   rest: { ...Type.caption1, marginTop: 2 },
 
   resultat: { marginTop: 26 },
-  tal: { flexDirection: 'row', gap: 38 },
+  tal: { flexDirection: 'row', flexWrap: 'wrap', gap: 28 },
   talVaerdi: { ...Type.title1, ...Tal },
   talNavn: { ...Type.caption2, marginTop: 2 },
   skoen: { ...Type.caption1, marginTop: 12 },
@@ -388,14 +426,13 @@ const s = StyleSheet.create({
   fejl: { ...Type.footnote, marginTop: 16 },
 
   bjaelke: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 22, paddingTop: 14, paddingBottom: 18, borderTopWidth: 1,
+    width: '100%', maxWidth: 720, alignSelf: 'center',
+    gap: 10, paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1,
   },
   bjaelkeTekst: { ...Type.footnote, ...Tal },
-  knapper: { flexDirection: 'row', gap: 8 },
+  knapper: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   knap: {
-    height: 44, borderRadius: 22, paddingHorizontal: 20,
+    minHeight: 48, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
   },
   knapTekst: { ...Type.callout, fontWeight: '600' },

@@ -24,11 +24,12 @@ for (const post of ['manifest.webmanifest', 'sw.js', 'robots.txt', 'ikoner']) {
 }
 
 const hoved = `
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Auto Vagt">
-    <meta name="theme-color" content="#131211">
+    <meta name="apple-mobile-web-app-title" content="VagtStatus">
+    <meta name="theme-color" content="#000000">
+    <meta name="color-scheme" content="dark">
     <meta name="robots" content="noindex, nofollow">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" sizes="180x180" href="/ikoner/ikon-180.png">
@@ -36,7 +37,7 @@ const hoved = `
     <link rel="apple-touch-icon" sizes="120x120" href="/ikoner/ikon-120.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/ikoner/ikon-192.png">
     <style>
-      html, body { background: #131211; }
+      html, body { background: #000000; }
       /* Overrulling i standalone-tilstand ser forkert ud paa en app-flade. */
       body { overscroll-behavior-y: none; }
     </style>
@@ -57,9 +58,11 @@ let html = readFileSync(sti, 'utf8');
 if (html.includes('manifest.webmanifest')) {
   console.log('==> index.html var allerede behandlet');
 } else {
+  html = html.replace(/<meta\s+name="viewport"[^>]*>/gi, '');
   html = html.replace('</head>', hoved + '  </head>');
-  html = html.replace(/<title>[^<]*<\/title>/, '<title>Auto Vagt</title>');
-  if (!/<title>/.test(html)) html = html.replace('</head>', '  <title>Auto Vagt</title>\n  </head>');
+  html = html.replace(/<title>[^<]*<\/title>/, '<title>VagtStatus</title>');
+  if (!/<title>/.test(html)) html = html.replace('</head>', '  <title>VagtStatus</title>\n  </head>');
+  html = html.replace('<html lang="en">', '<html lang="da">');
   writeFileSync(sti, html);
   console.log('==> index.html udvidet med manifest, ikoner og service worker');
 }

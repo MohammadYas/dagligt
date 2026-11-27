@@ -1,16 +1,16 @@
 /**
- * Planlagt tjek: ser hvert minut om Toern-scripter har meldt sig.
+ * Planlagt tjek: ser hvert minut om CAS-scriptet har meldt sig.
  *
  * Er statusfilen mere end tre minutter gammel, sendes et push-varsel til
- * telefonen. Der gaar hoest ét varsel hvert 10. minut, saa en Toern der
- * er gaaet helt ned ikke overdenger telefonen. Naar Toern melder igen,
+ * telefonen. Der gaar hoest ét varsel hvert 10. minut, saa et CAS-script der
+ * er gaaet helt ned ikke overdenger telefonen. Naar CAS melder igen,
  * spaendes vaagenen: naeste tiet er der igen varsel med det samme.
  */
 import webPush from 'web-push';
 import { hent, gem } from './_dropbox.mjs';
 
 const STI = '/push_abonnement.txt';
-const STATUS = '/status_torn.txt';
+const STATUS = '/status_cas.txt';
 const TAVS_GRANSE_MS = 3 * 60_000;
 const GENVARSEL_MS = 10 * 60_000;
 
@@ -34,7 +34,7 @@ export default async () => {
   const tavs = alder > TAVS_GRANSE_MS;
 
   if (!tavs) {
-    // Toern melder sig: ryd et gammelt varsel, saa naeste tiet giver besked.
+    // CAS melder sig: ryd et gammelt varsel, saa naeste tavshed giver besked.
     if (gemt.sidstVarslet) {
       await gem(STI, JSON.stringify({ abonnement, sidstVarslet: null }));
     }
@@ -56,7 +56,7 @@ export default async () => {
     await webPush.sendNotification(
       abonnement,
       JSON.stringify({
-        titel: 'Tørn melder sig ikke',
+        titel: 'CAS melder sig ikke',
         tekst: 'Status er mere end tre minutter gammel.',
       }),
     );

@@ -165,5 +165,5 @@ export function tid(sekunder: number): string {
 }
 
 export function afstand(meter: number): string {
-  return meter < 1000 ? `${meter} m` : `${(meter / 1000).toFixed(1)} km`;
+  return meter < 1000 ? `${meter} m` : `${(meter / 1000).toLocaleString('da-DK', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
 }

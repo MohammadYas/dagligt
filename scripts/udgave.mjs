@@ -15,5 +15,5 @@ console.log('==> Udgave ' + udgave);
 execFileSync(
   'npx',
   ['expo', 'export', '--platform', 'web', '--output-dir', 'dist'],
-  { stdio: 'inherit', shell: true, env: { ...process.env, EXPO_PUBLIC_UDGAVE: udgave } },
+  { stdio: 'inherit', shell: true, env: { ...process.env, EXPO_NO_DOTENV: '1', EXPO_PUBLIC_UDGAVE: udgave } },
 );

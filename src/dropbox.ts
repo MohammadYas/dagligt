@@ -71,6 +71,17 @@ function oversaetFejl(status: number, krop: string): DropboxFejl {
   return new DropboxFejl(`Dropbox svarede ${status}. ${kort}`, status);
 }
 
+async function authenticated(url: string, init: RequestInit): Promise<Response> {
+  let response = await fetch(url, init);
+  if (response.status === 401) {
+    cache = null;
+    await response.text();
+    const token = await adgangstoken();
+    response = await fetch(url, { ...init, headers: { ...init.headers, Authorization: `Bearer ${token}` } });
+  }
+  return response;
+}
+
 export type Fil = { tekst: string; skrevet: Date | null };
 
 /** Tidspunktet Dropbox selv noterede. Foelger med i svaret, gratis. */
@@ -104,7 +115,7 @@ export async function hentStatus(sti: string): Promise<Fil> {
   }
 
   const t = await adgangstoken();
-  const svar = await fetch('https://content.dropboxapi.com/2/files/download', {
+  const svar = await authenticated('https://content.dropboxapi.com/2/files/download', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${t}`,
@@ -126,7 +137,7 @@ export async function hentFil(sti: string): Promise<string> {
   }
 
   const t = await adgangstoken();
-  const svar = await fetch('https://content.dropboxapi.com/2/files/download', {
+  const svar = await authenticated('https://content.dropboxapi.com/2/files/download', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${t}`,
@@ -150,7 +161,7 @@ export async function gemFil(sti: string, indhold: string): Promise<void> {
   }
 
   const t = await adgangstoken();
-  const svar = await fetch('https://content.dropboxapi.com/2/files/upload', {
+  const svar = await authenticated('https://content.dropboxapi.com/2/files/upload', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${t}`,

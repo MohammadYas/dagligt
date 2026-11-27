@@ -131,6 +131,7 @@ export type Status = {
   taget: string | null;
   mode: string | null;
   dine: string | null;
+  interesseret: string | null;
   forgammel: boolean;
 };
 
@@ -157,6 +158,7 @@ export function parseStatus(raa: string, skrevet?: Date | null): Status {
   const matcherM = find(/Matcher:\s*(\d+)/i);
   const tagetM = find(/Taget i (?:dag|alt):\s*(\d+(?:\/\d+)?)/i);
   const dineM = find(/Dine vagter:\s*(.+)/i);
+  const interesseretM = find(/Interesseret:\s*(.+)/i);
   const modeM = find(/Mode:\s*(.+)/i);
 
   // Filens egen tid vises, men alderen maales paa Dropbox' stempel naar
@@ -175,7 +177,8 @@ export function parseStatus(raa: string, skrevet?: Date | null): Status {
     taget: tagetM?.[1] ?? null,
     mode: modeM?.[1]?.trim() ?? null,
     dine: dineM?.[1]?.trim() ?? null,
-    forgammel: Boolean(sidsteTjek) && alder > TAVS_EFTER_MS,
+    interesseret: interesseretM?.[1]?.trim() ?? null,
+    forgammel: !maalt || alder > TAVS_EFTER_MS,
   };
 }
 

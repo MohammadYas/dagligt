@@ -3,7 +3,7 @@
  *
  * Nøglerne bor i Netlifys miljøvariabler og forlader aldrig serveren.
  * Browseren beder om "hent /dage.txt", ikke om et token — så en adresse
- * der falder i de forkerte hænder giver adgang til de fire filer, ikke
+ * der falder i de forkerte hænder giver adgang til de tilladte filer, ikke
  * til hele Dropbox-kontoen.
  */
 
@@ -11,6 +11,7 @@ import { harAdgang, AFVIST } from './_adgang.mjs';
 import { hent, gem } from './_dropbox.mjs';
 
 const TILLADTE = new Set([
+  '/kontrol.txt',
   '/dage.txt',
   '/torn_dage.txt',
   '/status_cas.txt',
@@ -38,6 +39,7 @@ export default async (request) => {
         status: r.status,
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-store',
           'Access-Control-Expose-Headers': 'x-skrevet',
           ...(r.skrevet ? { 'x-skrevet': r.skrevet } : {}),
         },
@@ -48,6 +50,7 @@ export default async (request) => {
   }
 
   if (request.method === 'POST') {
+    if (sti.startsWith('/status_')) return new Response('Status kan kun læses.', { status: 405 });
     try {
       const krop = await request.text();
       const r = await gem(sti, krop);

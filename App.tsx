@@ -1,120 +1,67 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, useColorScheme, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
-import { DB, load, save, empty } from './src/store';
-import { light, dark } from './src/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { dark as t } from './src/theme';
 import { erWeb, harAdgang } from './src/adgang';
 import Laas from './src/components/Laas';
-import { opdaterWidget } from './src/widget';
-import Dag from './src/screens/Dag';
-import Fang from './src/screens/Fang';
-import Projekter from './src/screens/Projekter';
 import Vagter from './src/screens/Vagter';
 import Rute from './src/screens/Rute';
-import Indstillinger from './src/screens/Indstillinger';
+import Lon from './src/screens/Lon';
+import WebAppearance from './src/components/WebAppearance';
 
-const NAVN = 'mo';
-
-const TABS = [
-  { key: 'dag', label: 'Dag', icon: 'sunny-outline', on: 'sunny' },
-  { key: 'fang', label: 'Fang', icon: 'file-tray-outline', on: 'file-tray' },
-  { key: 'rute', label: 'Rute', icon: 'navigate-outline', on: 'navigate' },
-  { key: 'vagter', label: 'Vagter', icon: 'pulse-outline', on: 'pulse' },
-  { key: 'projekter', label: 'Projekter', icon: 'grid-outline', on: 'grid' },
-  { key: 'indstillinger', label: 'Indstillinger', icon: 'settings-outline', on: 'settings' },
-] as const;
-
-type TabKey = (typeof TABS)[number]['key'];
-
-export default function App() {
-  const scheme = useColorScheme();
-  const t = scheme === 'dark' ? dark : light;
-  const [tab, setTab] = useState<TabKey>('dag');
-  const [db, setDb] = useState<DB>(empty);
-  const [klar, setKlar] = useState(false);
-  const [laast, setLaast] = useState(erWeb && !harAdgang());
-
-  // Safari giver ingen sikker zone paa web, saa bundlinjen loeftes selv.
-
-  useEffect(() => {
-    load().then((d) => {
-      setDb(d);
-      setKlar(true);
-      opdaterWidget(d);
-    });
-  }, []);
-
-  function update(fn: (d: DB) => DB) {
-    setDb((prev) => {
-      const next = fn(prev);
-      save(next);
-      opdaterWidget(next);
-      return next;
-    });
-  }
-
-  return (
-    <SafeAreaProvider>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      {/* Kun toppen. Bunden ejes af fanelinjen, som skal naa skaermkanten;
-          en sikker zone her ville loefte hele appen fri af den. */}
-      <SafeAreaView style={[s.root, { backgroundColor: t.bg }]} edges={['top']}>
-        {laast ? (
-          <Laas t={t} aabnet={() => setLaast(false)} />
-        ) : (
-        <KeyboardAvoidingView
-          style={s.root}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={0}
-        >
-          {!klar ? (
-            <View style={s.center}>
-              <ActivityIndicator color={t.accent} />
-            </View>
-          ) : tab === 'dag' ? (
-            <Dag db={db} update={update} t={t} navn={NAVN} />
-          ) : tab === 'fang' ? (
-            <Fang db={db} update={update} t={t} />
-          ) : tab === 'rute' ? (
-            <Rute t={t} />
-          ) : tab === 'vagter' ? (
-            <Vagter t={t} />
-          ) : tab === 'projekter' ? (
-            <Projekter t={t} />
-          ) : (
-            <Indstillinger t={t} />
-          )}
-
-          <View
-            style={[
-              s.tabbar,
-              { borderTopColor: t.line, backgroundColor: t.card },
-            ]}
-          >
-            {TABS.map((x) => {
-              const aktiv = tab === x.key;
-              return (
-                <Pressable key={x.key} style={s.tab} onPress={() => setTab(x.key)} accessibilityRole="button">
-                  <Ionicons name={(aktiv ? x.on : x.icon) as any} size={21} color={aktiv ? t.accent : t.faint} />
-                  <Text style={[s.tabLabel, { color: aktiv ? t.accent : t.faint }]}>{x.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </KeyboardAvoidingView>
-        )}
-      </SafeAreaView>
-    </SafeAreaProvider>
-  );
+export type Route = 'vagter' | 'rute' | 'lon' | 'oensker' | 'bureauer' | 'par';
+const routes: Route[] = ['vagter', 'rute', 'lon', 'oensker', 'bureauer', 'par'];
+const isVagtRoute = (route: Route): route is 'vagter' | 'oensker' | 'bureauer' | 'par' => ['vagter', 'oensker', 'bureauer', 'par'].includes(route);
+function readRoute(): Route {
+  const name = erWeb ? window.location.hash.slice(1) : '';
+  return routes.includes(name as Route) ? name as Route : 'vagter';
 }
-
+function Shell() {
+  const [route, setRoute] = useState<Route>(readRoute);
+  const [ruteOpened, setRuteOpened] = useState(route === 'rute');
+  const [lonOpened, setLonOpened] = useState(route === 'lon');
+  const [locked, setLocked] = useState(erWeb && !harAdgang());
+  const inset = useSafeAreaInsets();
+  useEffect(() => {
+    if (!erWeb) return;
+    const changed = () => { const r = readRoute(); setRoute(r); if (r === 'rute') setRuteOpened(true); if (r === 'lon') setLonOpened(true); };
+    window.addEventListener('hashchange', changed);
+    return () => window.removeEventListener('hashchange', changed);
+  }, []);
+  const go = (r: Route) => {
+    setRoute(r); if (r === 'rute') setRuteOpened(true); if (r === 'lon') setLonOpened(true);
+    if (erWeb && window.location.hash !== '#' + r) window.location.hash = r;
+  };
+  return <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
+    {locked ? <Laas t={t} aabnet={() => setLocked(false)} /> :
+      <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={[s.screenArea, { paddingBottom: Platform.OS === 'web' ? 76 : 62 + inset.bottom }]}>
+          <View style={[s.content, !isVagtRoute(route) && { display: 'none' }]}><Vagter t={t} route={isVagtRoute(route) ? route : 'vagter'} navigate={go} /></View>
+          {ruteOpened && <View style={[s.content, route !== 'rute' && { display: 'none' }]}><Rute t={t} /></View>}
+          {lonOpened && <View style={[s.content, route !== 'lon' && { display: 'none' }]}><Lon /></View>}
+        </View>
+        <View accessibilityRole="tablist" style={[s.tabbar, { paddingBottom: Platform.OS === 'web' ? 'max(env(safe-area-inset-bottom), 8px)' as any : Math.max(inset.bottom, 8) }]}>
+          {([{ key: 'vagter', label: 'Vagter', icon: 'calendar' }, { key: 'lon', label: 'Løn', icon: 'cash' }, { key: 'rute', label: 'Rute', icon: 'navigate' }] as const).map(tab => {
+            const selected = tab.key === 'vagter' ? isVagtRoute(route) : route === tab.key;
+            return <Pressable key={tab.key} accessibilityRole="tab" accessibilityLabel={tab.label} aria-selected={selected} accessibilityState={{ selected }} onPress={() => go(tab.key)} style={s.tab}>
+              <Ionicons aria-hidden name={tab.icon} size={25} color={selected ? t.accent : t.faint} />
+              <Text maxFontSizeMultiplier={1.5} style={[s.tabText, { color: selected ? t.accent : t.faint }]}>{tab.label}</Text>
+            </Pressable>;
+          })}
+        </View>
+      </KeyboardAvoidingView>}
+  </SafeAreaView>;
+}
+export default function App() {
+  return <SafeAreaProvider><WebAppearance /><StatusBar style="light" /><Shell /></SafeAreaProvider>;
+}
 const s = StyleSheet.create({
-  root: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // Teksten slutter praecis ved skaermkanten.
-  tabbar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 11, paddingBottom: 0 },
-  tab: { flex: 1, alignItems: 'center', gap: 3 },
-  tabLabel: { fontSize: 10, fontWeight: '500' },
+  root: { flex: 1, minHeight: 0, position: 'relative', backgroundColor: t.bg },
+  screenArea: { flex: 1, minHeight: 0 },
+  content: { flex: 1, minHeight: 0 },
+  tabbar: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 10, flexDirection: 'row', justifyContent: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.line, backgroundColor: t.card, paddingTop: 5 },
+  tab: { flex: 1, maxWidth: 240, minHeight: 54, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  tabText: { fontSize: 12, fontWeight: '600' },
 });

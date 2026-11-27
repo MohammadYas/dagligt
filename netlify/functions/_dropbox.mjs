@@ -7,12 +7,20 @@
  */
 
 let cache = null;
+let renewing = null;
 
 export async function adgangstoken() {
   if (cache && Date.now() < cache.udloeber) return cache.vaerdi;
+  if (renewing) return renewing;
+  renewing = forny();
+  try { return await renewing; } finally { renewing = null; }
+}
+
+async function forny() {
 
   const svar = await fetch('https://api.dropboxapi.com/oauth2/token', {
     method: 'POST',
+    signal: AbortSignal.timeout(15000),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body:
       'grant_type=refresh_token' +
@@ -31,16 +39,24 @@ export async function adgangstoken() {
   return cache.vaerdi;
 }
 
+async function request(path, init) {
+  const send = async () => fetch('https://content.dropboxapi.com/2/files/' + path, {
+    ...init, signal: AbortSignal.timeout(20000),
+    headers: { ...init.headers, Authorization: 'Bearer ' + await adgangstoken() },
+  });
+  let r = await send();
+  if (r.status === 401) { cache = null; await r.text(); r = await send(); }
+  return r;
+}
+
 /**
  * Henter en fil. `skrevet` er Dropbox' eget stempel; scriptmaskinens ur
  * kan ikke stoles paa, men Dropbox' kan.
  */
 export async function hent(sti) {
-  const token = await adgangstoken();
-  const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+  const r = await request('download', {
     method: 'POST',
     headers: {
-      Authorization: 'Bearer ' + token,
       'Dropbox-API-Arg': JSON.stringify({ path: sti }),
     },
   });
@@ -58,20 +74,14 @@ export async function hent(sti) {
 
 /** Skriver en fil. Opretter den hvis den ikke findes endnu. */
 export async function gem(sti, indhold) {
-  const token = await adgangstoken();
-  const send = async (mode) =>
-    fetch('https://content.dropboxapi.com/2/files/upload', {
+  const r = await request('upload', {
       method: 'POST',
       headers: {
-        Authorization: 'Bearer ' + token,
-        'Dropbox-API-Arg': JSON.stringify({ path: sti, mode }),
+        'Dropbox-API-Arg': JSON.stringify({ path: sti, mode: 'overwrite' }),
         'Content-Type': 'application/octet-stream',
       },
       body: indhold,
     });
-
-  let r = await send('overwrite');
-  if (!r.ok && r.status === 409) r = await send('add');
 
   return { ok: r.ok, status: r.status, tekst: await r.text() };
 }
