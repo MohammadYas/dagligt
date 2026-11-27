@@ -29,6 +29,7 @@
 }
 button.raekke:active { background: var(--card-2); }
 .raekke__ikon { color: var(--accent); display: flex; }
+.raekke__flise { flex: none; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; }
 .raekke__tekst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .raekke__hoejre { color: var(--faint); display: flex; align-items: center; gap: 6px; }
 
@@ -64,9 +65,11 @@ button.raekke:active { background: var(--card-2); }
   min-height: 30px; padding: 0 12px; border-radius: 15px;
   font-size: 13px; font-weight: 600; background: var(--card); color: var(--dim);
 }
-.pille--ok { color: var(--ok); }
-.pille--advarsel { color: var(--warn); }
-.pille--fejl { color: var(--err); }
+.pille { transition: color 200ms ease, background-color 200ms ease; background: var(--card-2); }
+.pille::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pille--ok { color: var(--ok); background: rgba(93, 219, 131, 0.14); }
+.pille--advarsel { color: var(--warn); background: rgba(255, 208, 106, 0.14); }
+.pille--fejl { color: var(--err); background: rgba(255, 130, 123, 0.14); }
 
 /* Sheet */
 .ark-bag { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.55); }
@@ -89,3 +92,49 @@ button.raekke:active { background: var(--card-2); }
 /* Screen header */
 .hoved { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .tilbage { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; color: var(--accent); font-size: 17px; margin-left: -8px; }
+
+/* Segmented control */
+.segment { display: flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--card-2); }
+.segment__valg { position: relative; flex: 1; min-width: 0; min-height: 40px; padding: 0 10px; border-radius: 8px; color: var(--text); font-size: 15px; font-weight: 600; }
+.segment__pille { position: absolute; inset: 0; border-radius: 8px; background: #636366; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12); }
+.segment__tekst { position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+
+/* Chips and small layouts */
+.chip { min-height: 40px; padding: 0 14px; border-radius: 10px; background: var(--card-2); color: var(--text); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; transition: background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out); }
+.chip[aria-pressed='true'] { background: var(--accent-bg); color: var(--accent-text); }
+.raekke2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.knapper { display: flex; flex-direction: column; gap: 10px; }
+.drej { animation: snurre 0.9s linear infinite; }
+
+/* Pay card */
+.loenkort {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 18px; padding: 20px; border-radius: 22px;
+  background: radial-gradient(120% 90% at 100% 0%, rgba(100, 168, 255, 0.22) 0%, rgba(100, 168, 255, 0) 60%), linear-gradient(180deg, #1f2430 0%, var(--card) 100%);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.12);
+}
+.loenkort__flade { display: flex; flex-direction: column; gap: 14px; text-align: left; color: var(--text); border-radius: 12px; transition: transform 160ms var(--ease-out); }
+.loenkort__flade:active { transform: scale(0.98); }
+.loenkort__top { display: flex; justify-content: space-between; align-items: center; color: var(--dim); }
+.loenkort__etiket { font-size: 13px; line-height: 18px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-text); }
+.loenkort__beloeb { display: block; font-size: 44px; line-height: 48px; font-weight: 700; letter-spacing: -1px; }
+.loenkort__beloeb--mangler { font-size: 22px; line-height: 28px; letter-spacing: 0; color: var(--faint); }
+.loenkort__tal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 14px; border-top: 0.5px solid rgba(255, 255, 255, 0.1); }
+.loenkort__tal span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.loenkort__tal b { font-size: 17px; line-height: 22px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Shift sheet */
+.vagt__hurtig { display: flex; gap: 8px; flex-wrap: wrap; }
+.vagt__beregning { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 14px; background: var(--card-2); }
+.vagt__slet { display: flex; flex-direction: column; gap: 10px; }
+
+/* CAS */
+.cas__hoved { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 8px 4px 16px; }
+.cas__titel { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gruppe__flade > .cas__siden { border-top: 0; padding: 0 16px 12px; margin: 0; }
+.cas__detaljer { display: flex; flex-direction: column; gap: 10px; }
+.cas__detaljer > * { margin-left: 16px; margin-right: 16px; }
+.cas__detaljer > :first-child { margin-top: 12px; }
+.cas__detaljer > :last-child { margin-bottom: 16px; }
+.cas__tal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
+.cas__tal dd { margin: 0; }
+.cas__raa { max-height: 200px; overflow: auto; margin: 0; padding: 12px; border-radius: 10px; background: var(--bg); color: var(--dim); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }

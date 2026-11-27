@@ -1,4 +1,6 @@
-import { InputHTMLAttributes, KeyboardEvent, ReactNode } from 'react';
+import { InputHTMLAttributes, KeyboardEvent, ReactNode, useId } from 'react';
+import { motion } from 'motion/react';
+import { hurtig } from './bevaegelse';
 import Ikon, { IkonNavn } from './Ikon';
 
 export function Knap({ label, onPress, variant, ikon, optaget, deaktiveret, fuld, type = 'button' }: {
@@ -32,12 +34,14 @@ export function Gruppe({ titel, hjaelp, children }: { titel?: string; hjaelp?: s
   );
 }
 
-export function Raekke({ titel, detalje, ikon, onPress, hoejre, chevron = !!onPress }: {
-  titel: ReactNode; detalje?: ReactNode; ikon?: IkonNavn; onPress?: () => void; hoejre?: ReactNode; chevron?: boolean;
+export function Raekke({ titel, detalje, ikon, flise, onPress, hoejre, chevron = !!onPress }: {
+  titel: ReactNode; detalje?: ReactNode; ikon?: IkonNavn; flise?: string; onPress?: () => void; hoejre?: ReactNode; chevron?: boolean;
 }) {
   const indhold = (
     <>
-      {ikon && <span className="raekke__ikon"><Ikon navn={ikon} str={24} /></span>}
+      {ikon && (flise
+        ? <span className="raekke__flise" style={{ background: flise }}><Ikon navn={ikon} str={18} tyk={2} /></span>
+        : <span className="raekke__ikon"><Ikon navn={ikon} str={24} /></span>)}
       <span className="raekke__tekst">
         <span className="t-body">{titel}</span>
         {detalje && <span className="t-foot">{detalje}</span>}
@@ -86,5 +90,20 @@ export function Hoved({ titel, tilbage, onTilbage, hoejre, under }: { titel: str
       <div className="hoved"><h1 className="t-large">{titel}</h1>{hoejre}</div>
       {under && <p className="t-sub">{under}</p>}
     </header>
+  );
+}
+
+/** iOS segmented control; the selected pill slides between options. */
+export function Segment<T extends string>({ valg, vaerdi, onSkift, label }: { valg: { v: T; tekst: string }[]; vaerdi: T; onSkift: (v: T) => void; label: string }) {
+  const id = useId();
+  return (
+    <div className="segment" role="radiogroup" aria-label={label}>
+      {valg.map(o => (
+        <button key={o.v} type="button" role="radio" aria-checked={o.v === vaerdi} className="segment__valg" onClick={() => onSkift(o.v)}>
+          {o.v === vaerdi && <motion.span layoutId={`segment-${id}`} className="segment__pille" transition={hurtig} />}
+          <span className="segment__tekst">{o.tekst}</span>
+        </button>
+      ))}
+    </div>
   );
 }

@@ -3,13 +3,16 @@ import { harAdgang } from '../src/adgang';
 import { useSkaerm, Skaerm } from './rute';
 import TabBar, { faneFor, Fane } from './TabBar';
 import Laas from './screens/Laas';
+import Hjem from './screens/Hjem';
+import { useGemVedForlad } from './data/session';
 
 function Pladsholder({ navn }: { navn: string }) {
   return <div className="side"><h1 className="t-large">{navn}</h1></div>;
 }
 
-const SKAERME: Record<Exclude<Skaerm, 'rute'>, () => ReactElement> = {
-  hjem: () => <Pladsholder navn="VagtStatus" />,
+type Nav = { gaa: (s: Skaerm) => void };
+const SKAERME: Record<Exclude<Skaerm, 'rute'>, (p: Nav) => ReactElement> = {
+  hjem: ({ gaa }) => <Hjem gaa={gaa} />,
   dage: () => <Pladsholder navn="Dage og steder" />,
   arbejdspladser: () => <Pladsholder navn="Arbejdspladser" />,
   indstillinger: () => <Pladsholder navn="Indstillinger" />,
@@ -23,6 +26,7 @@ export default function App() {
   const [ruteAabnet, setRuteAabnet] = useState(skaerm === 'rute');
   const scroll = useRef<HTMLDivElement>(null);
   useEffect(() => { if (skaerm === 'rute') setRuteAabnet(true); scroll.current?.scrollTo(0, 0); }, [skaerm]);
+  useGemVedForlad();
 
   if (laast) return <Laas aabnet={() => setLaast(false)} />;
 
@@ -31,7 +35,7 @@ export default function App() {
   return (
     <div className="skal">
       <div className="skaerm" ref={scroll} hidden={skaerm === 'rute'}>
-        {Aktiv && <Aktiv />}
+        {Aktiv && <Aktiv gaa={gaa} />}
       </div>
       {ruteAabnet && (
         <div className="skaerm" hidden={skaerm !== 'rute'}>
