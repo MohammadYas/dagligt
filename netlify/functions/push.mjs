@@ -6,7 +6,7 @@
  * abonnement hertil; noeglerne til at sende med bor i miljoevariablerne.
  */
 import { harAdgang, AFVIST } from './_adgang.mjs';
-import { gem } from './_dropbox.mjs';
+import { hent, gem } from './_dropbox.mjs';
 
 const STI = '/push_abonnement.txt';
 
@@ -24,7 +24,14 @@ export default async (request) => {
       if (!abonnement || !abonnement.endpoint) {
         return new Response('Abonnementet mangler endpoint.', { status: 400 });
       }
-      const r = await gem(STI, JSON.stringify({ abonnement, sidstVarslet: null }));
+      // Appen melder sig ved hver aabning. Behold tilstanden (sidstVarslet,
+      // sidstTaget), saa en aabning ikke nulstiller varslerne.
+      let gammel = {};
+      const nu = await hent(STI);
+      if (nu.ok) {
+        try { gammel = JSON.parse(nu.tekst) ?? {}; } catch {}
+      }
+      const r = await gem(STI, JSON.stringify({ sidstVarslet: null, ...gammel, abonnement }));
       return new Response(r.ok ? 'ok' : r.tekst, { status: r.status });
     }
 

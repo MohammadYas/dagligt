@@ -1,18 +1,19 @@
 /**
- * Planlagt tjek: ser hvert minut om CAS-scriptet har meldt sig.
+ * Planlagt tjek: ser hvert minut paa CAS-statusfilen.
  *
- * Er statusfilen mere end tre minutter gammel, sendes et push-varsel til
- * telefonen. Der gaar hoest ét varsel hvert 10. minut, saa et CAS-script der
- * er gaaet helt ned ikke overdenger telefonen. Naar CAS melder igen,
- * spaendes vaagenen: naeste tiet er der igen varsel med det samme.
+ * - Er statusfilen mere end tre minutter gammel, sendes "CAS melder sig
+ *   ikke" (hoejst ét varsel hvert 10. minut).
+ * - Stiger "Taget i alt", sendes "Ny vagt taget".
+ *
+ * Statusfilen laeses kun. Det eneste der skrives er appens egen
+ * /push_abonnement.txt. Beslutningen ligger i _varsel.mjs.
  */
 import webPush from 'web-push';
 import { hent, gem } from './_dropbox.mjs';
+import { vurder, vapidSubjekt } from './_varsel.mjs';
 
 const STI = '/push_abonnement.txt';
 const STATUS = '/status_cas.txt';
-const TAVS_GRANSE_MS = 3 * 60_000;
-const GENVARSEL_MS = 10 * 60_000;
 
 export default async () => {
   const fil = await hent(STI);
@@ -28,45 +29,29 @@ export default async () => {
   if (!abonnement || !abonnement.endpoint) return;
 
   const status = await hent(STATUS);
-  if (!status.ok || !status.skrevet) return; // Kan ikke maale alder; lad vaere at varsle.
+  if (!status.ok) return;
 
-  const alder = Date.now() - Date.parse(status.skrevet);
-  const tavs = alder > TAVS_GRANSE_MS;
+  const { beskeder, nyGemt } = vurder({ gemt, statusTekst: status.tekst, skrevet: status.skrevet, nu: Date.now() });
 
-  if (!tavs) {
-    // CAS melder sig: ryd et gammelt varsel, saa naeste tavshed giver besked.
-    if (gemt.sidstVarslet) {
-      await gem(STI, JSON.stringify({ abonnement, sidstVarslet: null }));
-    }
-    return;
-  }
-
-  const sidenSidste = gemt.sidstVarslet
-    ? Date.now() - Date.parse(gemt.sidstVarslet)
-    : Infinity;
-  if (sidenSidste < GENVARSEL_MS) return;
-
-  webPush.setVapidDetails(
-    process.env.VAPID_SUBJECT ?? 'mailto:varsel@localhost',
-    process.env.VAPID_PUBLIC_KEY ?? '',
-    process.env.VAPID_PRIVATE_KEY ?? '',
-  );
-
-  try {
-    await webPush.sendNotification(
-      abonnement,
-      JSON.stringify({
-        titel: 'CAS melder sig ikke',
-        tekst: 'Status er mere end tre minutter gammel.',
-      }),
+  if (beskeder.length) {
+    webPush.setVapidDetails(
+      vapidSubjekt(process.env.VAPID_SUBJECT),
+      process.env.VAPID_PUBLIC_KEY ?? '',
+      process.env.VAPID_PRIVATE_KEY ?? '',
     );
-  } catch (e) {
-    // Abonnementet kan vaere udloebet (404/410). Telefonen maa melde sig igen.
-    console.error('Push fejlede:', e);
-    return;
+    for (const besked of beskeder) {
+      try {
+        await webPush.sendNotification(abonnement, JSON.stringify(besked));
+      } catch (e) {
+        // Abonnementet kan vaere udloebet (404/410). Telefonen maa melde sig igen.
+        // Intet gemmes, saa beskeden proeves igen naeste minut.
+        console.error('Push fejlede:', e);
+        return;
+      }
+    }
   }
 
-  await gem(STI, JSON.stringify({ abonnement, sidstVarslet: new Date().toISOString() }));
+  if (JSON.stringify(nyGemt) !== JSON.stringify(gemt)) await gem(STI, JSON.stringify(nyGemt));
 };
 
 export const config = { schedule: '*/1 * * * *' };
