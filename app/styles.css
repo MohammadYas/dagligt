@@ -1,0 +1,102 @@
+/* VagtStatus — Apple dark. Tokens mirror src/theme.ts `dark` (WCAG table in DESIGN.md). */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --card: #1c1c1e;
+  --card-2: #2c2c2e;
+  --text: #f5f5f7;
+  --dim: #c5c5cc;
+  --faint: #a1a1aa;
+  --line: #48484a;
+  --accent: #64a8ff;
+  --accent-bg: #142d4d;
+  --accent-text: #c1dcff;
+  --ok: #5ddb83;
+  --warn: #ffd06a;
+  --err: #ff827b;
+
+  /* Motion tokens (emilkowalski/skills · animate) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --tabbar-h: 49px;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --radius: 16px;
+  --gutter: 20px;
+
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.3;
+  -webkit-text-size-adjust: 100%;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  overscroll-behavior: none;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+[hidden] { display: none !important; }
+
+/* App shell: one scrolling screen above a fixed tab bar. No extra lift above the safe area. */
+.skal { height: 100%; display: flex; flex-direction: column; }
+.skaerm {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(var(--safe-top) + 12px) 0 calc(var(--tabbar-h) + var(--safe-bottom) + 24px);
+}
+.side { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 var(--gutter); display: flex; flex-direction: column; gap: 24px; }
+
+.fanebar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  height: calc(var(--tabbar-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  display: flex;
+  justify-content: center;
+  background: rgba(28, 28, 30, 0.92);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid var(--line);
+}
+.fane {
+  flex: 1;
+  max-width: 200px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--faint);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1px;
+  min-height: 44px;
+}
+.fane[aria-selected='true'] { color: var(--accent); }
+.fane svg { width: 26px; height: 26px; }
+
+/* Typography (iOS text styles) */
+.t-large { font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: -0.8px; margin: 0; }
+.t-title2 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.4px; margin: 0; }
+.t-headline { font-size: 17px; line-height: 22px; font-weight: 600; margin: 0; }
+.t-body { font-size: 17px; line-height: 22px; margin: 0; }
+.t-sub { font-size: 15px; line-height: 20px; color: var(--dim); margin: 0; }
+.t-foot { font-size: 13px; line-height: 18px; color: var(--faint); margin: 0; }
+.tal { font-variant-numeric: tabular-nums; }
+
+/* Press feedback — CSS, not JS (animate › Button press) */
+.tryk { transition: transform 160ms var(--ease-out), background-color 160ms ease; }
+.tryk:active { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tryk:active { transform: none; }
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}

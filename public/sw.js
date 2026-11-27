@@ -3,7 +3,7 @@
 // Navigationer hentes altid forbi browserens egen cache: index.html peger
 // paa et bundt med et indhold-hash i navnet, saa en gammel index.html
 // laaser hele appen fast paa den gamle kode.
-const CACHE = 'autovagt-v3';
+const CACHE = 'vagtstatus-v4';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
