@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import { gemFil, hentFil } from '../../src/dropbox.web';
+import { gemFil, hentFil } from '../../src/dropbox';
 import { VagtSession } from '../../src/vagtsession';
 import type { FilKey } from '../../src/vagtdata';
 

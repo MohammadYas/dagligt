@@ -1,21 +1,21 @@
 # VagtStatus — Apple Dark
 
 Privat iPhone-first arbejdsapp: aflæs CAS/TØRN, vælg vagter, planlæg ruten.
-Expo 57 / React Native Web, leveret som PWA. Ingen SwiftUI-omskrivning.
+Vite + React 19 + Motion (`motion/react`), leveret som PWA. Ingen Expo/React Native og ingen SwiftUI-omskrivning. Netlify-funktionerne og Dropbox-filkontrakten er uændrede.
 
 ## Designkontrakt
 
-- Vagter, Løn og Rute er de tre topniveauer i bundnavigationen. Indstillinger for vagter hører under Vagter, og lønindstillinger hører under Løn.
+- Hjem, Løn og Rute er de tre topniveauer i bundnavigationen. Hjem viser lønkort med "Opret vagt", CAS-status med booking-kontakt og genveje til Dage og steder, Arbejdspladser og Indstillinger (varsler, udgave, lås). Lønindstillinger og tidligere udbetalinger hører under Løn. TØRN er skjult i UI, men datoer/steder skrives stadig til begge filer, og `TØRN:`-linjen bevares.
 - Sort kant-til-kant baggrund, neutrale hævede grupper, systemskrift og blå handlinger.
 - 34 px hovedtitler, 17 px brødtekst/kontroller, 13–15 px hjælpetekst, 12 px fanelabels.
 - Maksimal indholdsbredde 720 px, 20 px sidemargen. Statuskort ved siden af hinanden fra 620 px; ellers stablede.
 - Mindst 44 × 44 px trykflader. Kontakternes hele række er aktiv, ikke kun den tegnede switch.
-- Datoer vælges udelukkende i en inline kalender med store dagknapper og månedspile; valgte dage markeres blå og vises ikke som en separat datoliste.
+- Datoer vælges i en inline kalender med store dagknapper, månedspile og swipe; valgte dage markeres blå. Hvert tryk gemmes automatisk (1,2 s efter sidste tryk) uden at låse kalenderen.
 - Gem/Annuller står fast over fanerne ved ændringer. Indhold scroller i den resterende plads.
 - Bundnavigationen er fast forankret ved skærmens nederste safe area; ingen fane må flytte den, når indholdet scroller eller udvides.
 - Løn viser én tydelig næste-udbetalingsflade og en primær handling til at tilføje en vagt. Satser, skat og historik er sekundære grupper, ikke ekstra dashboard-kort.
 - Lange statuslinjer må altid brydes i panelet; CAS/TØRN-kort starter kompakt, kan åbnes efter behov og viser råstatus i et afgrænset scrollfelt.
-- Fejl og status har tekst, ikke kun farve. Intet dekorativt glas, ingen obligatorisk animation.
+- Fejl og status har tekst, ikke kun farve. Intet dekorativt glas. Animation følger Emil Kowalski-reglerne: korte ease-out-kurver, tryk skalerer til 0,97, udgange hurtigere end indgange, ingen animation på faner; ved reduced motion bruges fades.
 - Browserzoom er låst for stabil dagvælger på iPhone; systemets tekstskalering, synlig tastaturfokus og reduced-motion CSS bevares. Appskallen bruger `100dvh` direkte, så bundnavigationen står korrekt fra første frame uden at vente på et viewport-resize.
 
 Apple-design-skillen har styret gruppering, hierarki, tilgængelighed og adskillelse af navigation/handlinger:
@@ -43,7 +43,7 @@ Fast dark-only er brugerens udtrykkelige valg; det afviger fra Apples normale an
 
 `src/vagtdata.ts` læser/skriver de fem redigerbare indstillingsfiler. `TØRN` bevares præcist i kontrolfilen. Statusfiler kan ikke uploades gennem proxyen.
 
-`src/lon.ts` gemmer kun løndata lokalt i `AsyncStorage` (`vagtstatus.lon.v1`): vagter, personlige satser, hovedkort, fradrag, trækprocent og AM-bidrag. Trækprocenten er 39 % for både Multicare og Akut Hjælp; fradraget anvendes kun på hovedkortet. Den bruger en sammenhængende ISO-ugerytme til 14-dages perioder, onsdag som udbetaling og opdeler en vagt ved 07:00, 15:00, 23:00, midnat og weekendgrænsen. En vagt gemmer sin satsversion, så en senere satsændring ikke ændrer historikken.
+`src/lon.ts` gemmer kun løndata lokalt i `localStorage` (`vagtstatus.lon.v1`, samme nøgle og JSON-format som den gamle app på web, så eksisterende vagter følger med på samme domæne): vagter, personlige satser, hovedkort, fradrag, trækprocent og AM-bidrag. Trækprocenten er 39 % for både Multicare og Akut Hjælp; fradraget anvendes kun på hovedkortet. Den bruger en sammenhængende ISO-ugerytme til 14-dages perioder, onsdag som udbetaling og opdeler en vagt ved 07:00, 15:00, 23:00, midnat og weekendgrænsen. En vagt gemmer sin satsversion, så en senere satsændring ikke ændrer historikken.
 
 `VagtSession` bevarer kladder på tværs af navigation, validerer alle ændringer før upload og bekræfter hver fil separat. Mislykkede filer kan prøves igen uden at gentage bekræftede uploads. Et forsinket refresh kan ikke erstatte en nyere gemning. Et mistet uploadsvar genkendes ved næste læsning, hvis serverindholdet allerede svarer til kladden.
 
@@ -51,28 +51,24 @@ Konfliktkontrol før overwrite er best effort, ikke en atomisk flerfilstransakti
 
 Varsler er en særskilt telefonfunktion for CAS alene. Eksisterende push-abonnementer bekræftes hos serveren før status vises som slået til. Dage og steder vises som én fælles kladde og gemmes til både `/dage.txt` og `/torn_dage.txt`.
 
-## Verifikation (22. september 2026)
+## Verifikation (27. november 2026, web-omskrivning)
 
-- 35 automatiske isolerede tests består: codecs, kladder/Annuller, fælles CAS/TØRN-dage og steder, konflikter, delvise fejl, mistet uploadsvar, sen refresh, stedkatalog, 401 retry, read-only statusbeskyttelse, rutefallback og lønperioder/satser/skat inkl. 39 % for begge arbejdsgivere, migrering af den oprindelige tomme sats og dynamisk mobilhøjde for fast bundnavigation.
-- Faktiske `/bureauer.txt` og `/kontrol.txt` læst via eksisterende Dropbox-adgang. Bureaufilens forklaringslinjer adskilles nu fra slukkede bureauer og bevares ved gemning. Akut Hjælp og det fulde MultiCare-navn bliver hver sin kontakt. Bekræftet i lokal browserkopi: ingen upload før Gem, Annuller gendanner tilstanden, og Gem deaktiverer kun det valgte bureau. Live-filerne er ikke ændret.
-- TypeScript, Expo dependency check og produktions-webeksport.
-- `node scripts/check-web.mjs`: ingen kendte private .env-værdier i eksporten; ét fixed-scale viewport-tag med safe-area.
-- Browsertest med lokale syntetiske Dropbox-filer: kontakter, Annuller, netværksfejl + Prøv igen, fælles datoer/steder til begge systemer, prioritetspile, navnepar og kladder ved faneskift.
-- 320/375/414/768 px: ingen vandret dokument-overflow eller afskårne kontroller i målte navnepar- og rutevisninger. Visuelt kontrolleret ønsker, arbejdspladser, kontakter og gemmelinje ved kompakt bredde.
-- Forsidens interaktive kontroller målt til mindst 44 × 44 px ved alle fire bredder. Kontakter aktiveres med mellemrumstasten. Ved 375 × 400 px forbliver tekstfelt, Gem/Annuller og faner tilgængelige; dette simulerer kun kort højde, ikke et rigtigt Safari-tastatur.
-- Offentlige prøveadresser slået op og rute beregnet: Rådhuspladsen 1 til Vesterbrogade 3, København. Ruten bevaret efter faneskift. Ingen personlige adresser eller enhedsplacering anvendt.
-- Separat read-only kodegennemgang: fund rettet og gentestet.
+- 80 automatiske tests består (`npm test`), inkl. kalenderceller, gamle løndata læst uændret, lønperioder (søndagsaftenvagt 18. okt i udbetaling 21. okt) og alle eksisterende Dropbox-kontrakttests.
+- `npm run typecheck` (ét TypeScript-projekt) og `node scripts/udgave.mjs && node scripts/check-web.mjs` grønne. Bundle ca. 411 kB JS (134 kB gzip) + 13 kB CSS.
+- Kontraktfilerne (`src/vagtdata.ts`, `src/vagter.ts`, `src/steder.ts`, `netlify/functions/dropbox.mjs`, `_dropbox.mjs`, `_adgang.mjs`, `deepseek.mjs`) er uændrede i forhold til udgangspunktet.
+- Browsertest mod lokale syntetiske Dropbox-filer: booking-kontakt skriver præcis `CAS: OFF
+TØRN: ON
+`; fem hurtige datotryk havner i både `/dage.txt` og `/torn_dage.txt` med én skrivning pr. fil; ændringer under en igangværende gemning bevares; `/bureauer.txt` bevarer forklaringslinjer og afsluttende linjeskift; netværksfejl + Prøv igen; rute Rådhuspladsen 1 → Vesterbrogade 3.
+- 320/375/414 px: ingen vandret overflow; fanebaren står nederst.
 
 ### Ikke verificeret / levering
 
-- TØRN er sat til `OFF` i den aktuelle `/kontrol.txt` efter brugerens ønske. Den opdaterede PWA er deployet til Netlify-produktion.
-- Ingen fysisk iPhone-test: Safari-tastatur, home-indikator, VoiceOver og rigtige pushbeskeder kræver enhedskontrol. Browsermålinger er ikke en erstatning for dette.
-- Ingen signeret IPA/TestFlight-build. Det native projekt mangler Apple Team ID/signering, og native plugins kræver separat kompatibilitetskontrol.
-- `npm audit fix` anvendte en kompatibel opdatering. Der resterer 14 advisories (13 moderate, 1 high) i den transitive Expo/Xcode/Plist-værktøjskæde. Ingen tvungne major-opgraderinger udført.
-- Eksisterende Dag/Fang-data og den urelaterede `faktura-pilot.pdf` er ikke slettet.
+- Ingen fysisk iPhone-test endnu: bundbar i standalone, Safari-tastatur, VoiceOver og rigtige pushbeskeder kræver enhedskontrol.
+- Løndata ligger i browserens lager pr. domæne; skiftes domæne, følger de ikke med.
+- Den urelaterede `faktura-pilot.pdf` er ikke slettet.
 
 ## Gentag lokalt
 
-Kør `npm test`, `npm run typecheck`, og med `EXPO_NO_DOTENV=1` kør `npm run build:web`. Derefter `node scripts/check-web.mjs`.
+Kør `npm test`, `npm run typecheck` og `npm run build` (= `node scripts/udgave.mjs`). Derefter `node scripts/check-web.mjs`.
 
-`node scripts/preview-test.mjs` starter en isoleret preview på `http://127.0.0.1:8091/#n=local-preview`. Prøvedata ligger kun i hukommelsen. Previewen må ikke forveksles med appens live Dropbox-data.
+`node scripts/preview-test.mjs` starter en isoleret preview af `dist/` på `http://127.0.0.1:8091/#n=local-preview`. `npm run dev` starter Vite på 5173 og sender `/api` til den preview. Prøvedata ligger kun i hukommelsen og må ikke forveksles med appens live Dropbox-data.

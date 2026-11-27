@@ -1,6 +1,6 @@
 [build]
   publish = "dist"
-  command = "node scripts/udgave.mjs && node scripts/pwa.mjs"
+  command = "node scripts/udgave.mjs"
 
 [functions]
   directory = "netlify/functions"

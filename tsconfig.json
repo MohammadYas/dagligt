@@ -1,13 +1,15 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "types": ["vite/client", "node"]
   },
-  "exclude": [
-    "tests",
-    "node_modules",
-    "app",
-    "dist",
-    "vite.config.mts"
-  ]
+  "include": ["app", "src", "tests", "netlify"]
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Fil, hentStatus } from '../../src/dropbox.web';
+import { Fil, hentStatus } from '../../src/dropbox';
 import { FILER } from '../../src/vagter';
 
 const HVERT = 60_000;
