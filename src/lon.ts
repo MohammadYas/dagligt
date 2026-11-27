@@ -1,5 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 export type Employer = 'multicare' | 'akut';
 export type PayRates = { weekdayDay: number; weekdayEvening: number; weekdayNight: number; weekendDay: number; weekendEvening: number; weekendNight: number };
 export type PaySettings = {
@@ -162,6 +160,17 @@ export function upcomingPeriods(from: Date | string = new Date(), count = 6): Pa
   while (periods.length < count) { const period = getPayPeriodForDate(cursor); if (!periods.some(item => item.start === period.start)) periods.push(period); cursor = addDays(period.end, 1); }
   return periods;
 }
+/** The period paid out next: a finished period stays "next" until its payday has passed. */
+export function naesteLoen(today: string): PayPeriod {
+  const current = getPayPeriodForDate(today);
+  const previous = getPayPeriodForDate(addDays(current.start, -1));
+  return previous.payday >= today ? previous : current;
+}
+/** Paid-out periods that contain shifts, newest first. */
+export function tidligereLoen(shifts: Shift[], today: string): PayPeriod[] {
+  const periods = new Map(shifts.map(shift => { const p = getPayPeriodForDate(shift.date); return [p.start, p] as const; }));
+  return [...periods.values()].filter(p => p.payday < today).sort((a, b) => b.start.localeCompare(a.start));
+}
 export function shortDate(key: string): string { return localDate(key).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' }); }
 export function longDate(key: string): string { return localDate(key).toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); }
 export function formatKr(value: number): string { return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', maximumFractionDigits: 0 }).format(value); }
@@ -197,5 +206,7 @@ export function normalisePayData(value: unknown): PayData {
   }
   return { version: 2, settings, shifts: Array.isArray(input.shifts) ? input.shifts.map(normaliseShift).filter((shift): shift is Shift => !!shift) : [] };
 }
-export async function loadPayData(): Promise<PayData> { try { return normalisePayData(JSON.parse(await AsyncStorage.getItem(STORAGE_KEY) || 'null')); } catch { return normalisePayData(null); } }
-export async function savePayData(data: PayData): Promise<void> { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(normalisePayData(data))); }
+// Same key and raw JSON string that AsyncStorage wrote to localStorage on web.
+const lager = () => (globalThis as { localStorage?: Pick<Storage, 'getItem' | 'setItem'> }).localStorage;
+export async function loadPayData(): Promise<PayData> { try { return normalisePayData(JSON.parse(lager()?.getItem(STORAGE_KEY) || 'null')); } catch { return normalisePayData(null); } }
+export async function savePayData(data: PayData): Promise<void> { lager()?.setItem(STORAGE_KEY, JSON.stringify(normalisePayData(data))); }

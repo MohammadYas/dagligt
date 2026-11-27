@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePeriodGross, calculateShiftGross, calculateTaxEstimate, DEFAULT_SETTINGS, getISOWeek, getNextPayday, getPayPeriodForDate, normalisePayData, Shift, splitShiftIntoPaySegments } from '../src/lon';
+import { calculatePeriodGross, calculateShiftGross, calculateTaxEstimate, DEFAULT_SETTINGS, getISOWeek, getNextPayday, getPayPeriodForDate, loadPayData, naesteLoen, normalisePayData, savePayData, Shift, splitShiftIntoPaySegments, tidligereLoen } from '../src/lon';
 
 const shift = (patch: Partial<Shift>): Shift => ({ id: 's1', employer: 'multicare', date: '2026-09-21', start: '07:00', end: '15:00', unpaidBreakMinutes: 0, createdAt: 1, updatedAt: 1, ...patch });
 
@@ -79,4 +79,39 @@ test('nettoløn markeres ufuldstændig uden brugerens trækprocent', () => {
   assert.equal(tax.complete, false);
   assert.equal(tax.net, null);
   assert.equal(tax.aTax, null);
+});
+
+test('søndagsvagt forbliver i næste løn indtil lønningsdagen', () => {
+  for (const d of ['2026-10-17', '2026-10-18', '2026-10-19', '2026-10-20', '2026-10-21']) {
+    assert.equal(naesteLoen(d).payday, '2026-10-21', d);
+  }
+  assert.equal(naesteLoen('2026-10-22').payday, '2026-11-04');
+});
+
+test('tidligere udbetalinger starter dagen efter lønningsdag', () => {
+  const s = [shift({ date: '2026-10-18', start: '15:00', end: '23:00' })];
+  assert.deepEqual(tidligereLoen(s, '2026-10-21'), []);
+  assert.deepEqual(tidligereLoen(s, '2026-10-22').map(p => p.payday), ['2026-10-21']);
+});
+
+test('tidligere udbetalinger er unikke og nyeste først', () => {
+  const s = [shift({ id: 'a', date: '2026-09-21' }), shift({ id: 'b', date: '2026-09-22' }), shift({ id: 'c', date: '2026-10-06' })];
+  assert.deepEqual(tidligereLoen(s, '2026-11-01').map(p => p.payday), ['2026-10-21', '2026-10-07']);
+});
+
+test('løndata gemmes under samme localStorage-nøgle og format', async () => {
+  const store = new Map<string, string>();
+  const g = globalThis as any;
+  const before = g.localStorage;
+  g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); } };
+  try {
+    const data = normalisePayData(null);
+    data.shifts.push(shift({}));
+    await savePayData(data);
+    assert.deepEqual([...store.keys()], ['vagtstatus.lon.v1']);
+    assert.equal(JSON.parse(store.get('vagtstatus.lon.v1')!).version, 2);
+    assert.deepEqual(await loadPayData(), normalisePayData(data));
+  } finally {
+    if (before === undefined) delete g.localStorage; else g.localStorage = before;
+  }
 });
