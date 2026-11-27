@@ -99,6 +99,21 @@ test('tidligere udbetalinger er unikke og nyeste først', () => {
   assert.deepEqual(tidligereLoen(s, '2026-11-01').map(p => p.payday), ['2026-10-21', '2026-10-07']);
 });
 
+test('vagter gemt af den gamle app læses uændret', async () => {
+  const raa = '{"version":2,"shifts":[{"id":"a1","employer":"akut","date":"2026-10-18","start":"15:00","end":"23:00","unpaidBreakMinutes":30,"createdAt":1,"updatedAt":2}],"settings":' + JSON.stringify(DEFAULT_SETTINGS) + '}';
+  const g = globalThis as any;
+  const before = g.localStorage;
+  g.localStorage = { getItem: (k: string) => (k === 'vagtstatus.lon.v1' ? raa : null), setItem() {} };
+  try {
+    const d = await loadPayData();
+    assert.equal(d.shifts.length, 1);
+    assert.deepEqual([d.shifts[0].id, d.shifts[0].employer, d.shifts[0].date, d.shifts[0].start, d.shifts[0].end, d.shifts[0].unpaidBreakMinutes], ['a1', 'akut', '2026-10-18', '15:00', '23:00', 30]);
+    assert.deepEqual(d.settings, DEFAULT_SETTINGS);
+  } finally {
+    if (before === undefined) delete g.localStorage; else g.localStorage = before;
+  }
+});
+
 test('løndata gemmes under samme localStorage-nøgle og format', async () => {
   const store = new Map<string, string>();
   const g = globalThis as any;

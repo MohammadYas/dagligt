@@ -4,6 +4,7 @@ import { useSkaerm, Skaerm } from './rute';
 import TabBar, { faneFor, Fane } from './TabBar';
 import Laas from './screens/Laas';
 import Hjem from './screens/Hjem';
+import DageSteder from './screens/DageSteder';
 import { useGemVedForlad } from './data/session';
 
 function Pladsholder({ navn }: { navn: string }) {
@@ -13,7 +14,7 @@ function Pladsholder({ navn }: { navn: string }) {
 type Nav = { gaa: (s: Skaerm) => void };
 const SKAERME: Record<Exclude<Skaerm, 'rute'>, (p: Nav) => ReactElement> = {
   hjem: ({ gaa }) => <Hjem gaa={gaa} />,
-  dage: () => <Pladsholder navn="Dage og steder" />,
+  dage: ({ gaa }) => <DageSteder gaa={gaa} />,
   arbejdspladser: () => <Pladsholder navn="Arbejdspladser" />,
   indstillinger: () => <Pladsholder navn="Indstillinger" />,
   loen: () => <Pladsholder navn="Løn" />,

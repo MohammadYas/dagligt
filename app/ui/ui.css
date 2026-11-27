@@ -60,7 +60,7 @@ button.raekke:active { background: var(--card-2); }
 /* Messages and pills */
 .besked { font-size: 15px; line-height: 20px; color: var(--dim); margin: 0; }
 .besked--fejl { color: var(--err); }
-.pille {
+.pille { white-space: nowrap;
   display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
   min-height: 30px; padding: 0 12px; border-radius: 15px;
   font-size: 13px; font-weight: 600; background: var(--card); color: var(--dim);
@@ -138,3 +138,32 @@ button.raekke:active { background: var(--card-2); }
 .cas__tal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
 .cas__tal dd { margin: 0; }
 .cas__raa { max-height: 200px; overflow: auto; margin: 0; padding: 12px; border-radius: 10px; background: var(--bg); color: var(--dim); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+
+/* Calendar */
+.kal { padding: 8px 8px 12px; }
+.kal__top { display: flex; align-items: center; gap: 2px; padding: 0 0 4px 8px; }
+.kal__maaned { flex: 1; text-transform: capitalize; }
+.kal__idag { min-height: 32px; padding: 0 12px; border-radius: 16px; background: var(--accent-bg); color: var(--accent-text); font-size: 14px; font-weight: 600; margin-right: 4px; }
+.kal__uge, .kal__gitter { display: grid; grid-template-columns: repeat(7, 1fr); }
+.kal__uge span { text-align: center; font-size: 12px; font-weight: 600; color: var(--faint); padding: 4px 0 6px; }
+.kal__vindue { overflow: hidden; touch-action: pan-y; }
+.kal__gitter { row-gap: 2px; }
+.kal__dag { display: flex; align-items: center; justify-content: center; min-height: 46px; -webkit-tap-highlight-color: transparent; }
+.kal__dag span {
+  width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text);
+  transition: background-color 150ms ease, color 150ms ease, transform 160ms var(--ease-out);
+}
+.kal__dag[data-forbi] span { color: var(--faint); opacity: 0.6; }
+.kal__dag[data-idag] span { color: var(--accent); font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.kal__dag[aria-pressed='true'] span { background: var(--accent); color: #00142e; font-weight: 700; opacity: 1; box-shadow: none; }
+.kal__dag:active span { transform: scale(0.92); }
+
+/* Place picker */
+.sted__tjek {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: transparent; box-shadow: inset 0 0 0 1.5px var(--line);
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 160ms var(--ease-out);
+}
+.sted[aria-checked='true'] .sted__tjek { background: var(--accent); color: #00142e; box-shadow: none; }
+.sted:active .sted__tjek { transform: scale(0.9); }
