@@ -47,7 +47,8 @@ export class VagtSession {
     finally { e.loading = false; this.emit(); }
   }
   edit<K extends FilKey>(key: K, value: VagtData[K]) {
-    if (this.saving || !this.get(key).draft) return;
+    // Edits are accepted while saving; save() picks them up in a follow-up round.
+    if (!this.get(key).draft) return;
     this.rememberPlaces(key, value);
     this.get(key).draft = copy(value); this.error = null; this.message = ''; this.emit();
   }
@@ -69,7 +70,7 @@ export class VagtSession {
     this.saving = true; this.error = null; this.message = ''; this.emit();
     try {
       // Validate every draft before writing the first file.
-      const jobs = this.dirtyKeys.map(k => ({ key: k, text: skriv(k, this.entries[k].draft!, this.entries[k].raw) }));
+      const jobs = this.dirtyKeys.map(k => ({ key: k, value: copy(this.entries[k].draft!), text: skriv(k, this.entries[k].draft!, this.entries[k].raw) }));
       const confirmed = new Set<FilKey>();
       for (const job of jobs) {
         let current: string;
@@ -81,12 +82,17 @@ export class VagtSession {
       for (const job of jobs) {
         if (!confirmed.has(job.key)) await this.upload(STIER[job.key], job.text);
         const e = this.entries[job.key];
-        e.saved = copy(e.draft!); e.raw = job.text; e.error = undefined; e.missing = false;
+        // Checkpoint what was uploaded, not a draft edited meanwhile.
+        e.saved = job.value as never; e.raw = job.text; e.error = undefined; e.missing = false;
         // A later failure must not undo a file already confirmed by Dropbox.
         this.emit();
       }
       this.message = 'Gemt ✓';
     } catch (err) { this.error = besked(err); }
-    finally { this.saving = false; this.emit(); }
+    finally {
+      this.saving = false; this.emit();
+      // One follow-up round for edits made during this save. A failed save waits for the user.
+      if (!this.error && this.dirtyKeys.length) void this.save();
+    }
   }
 }

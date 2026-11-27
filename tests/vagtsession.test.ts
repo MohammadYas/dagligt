@@ -158,3 +158,63 @@ test('fælles dage og steder kan gemmes til både CAS- og TØRN-filen', async ()
   assert.deepEqual(writes, ['/dage.txt', '/torn_dage.txt']);
   assert.equal(files['/dage.txt'], files['/torn_dage.txt']);
 });
+
+function hangingSession() {
+  const files: Record<string, string> = { '/dage.txt': '', '/torn_dage.txt': '' };
+  const uploads: { path: string; text: string }[] = [];
+  let downloads = 0;
+  let gate: Promise<void> = Promise.resolve();
+  const session = new VagtSession(
+    async p => { downloads++; return files[p] ?? ''; },
+    async (p, text) => { await gate; uploads.push({ path: p, text }); files[p] = text; },
+  );
+  const hold = () => { let release!: () => void; gate = new Promise(r => { release = r; }); return () => { gate = Promise.resolve(); release(); }; };
+  const both = (datoer: string[]) => { session.edit('cas', { datoer, steder: [] }); session.edit('torn', { datoer, steder: [] }); };
+  const idle = async () => { for (let i = 0; i < 500 && (session.saving || session.dirtyKeys.length) && !session.error; i++) await new Promise(r => setTimeout(r, 2)); };
+  return { files, uploads, session, hold, both, idle, downloads: () => downloads };
+}
+
+test('edits during a save are kept and saved in a follow-up round', async () => {
+  const h = hangingSession();
+  await h.session.load('cas'); await h.session.load('torn');
+  const release = h.hold();
+  h.both(['2026-12-01']);
+  const first = h.session.save();
+  await new Promise(r => setTimeout(r, 5));
+  assert.equal(h.session.saving, true);
+  h.both(['2026-12-01', '2026-12-02']);
+  release();
+  await first; await h.idle();
+  assert.equal(h.session.error, null);
+  assert.equal(h.files['/dage.txt'], '2026-12-01\n2026-12-02\n');
+  assert.equal(h.files['/torn_dage.txt'], '2026-12-01\n2026-12-02\n');
+  assert.deepEqual(h.session.dirtyKeys, []);
+});
+
+test('five rapid toggles end in at most two upload rounds', async () => {
+  const h = hangingSession();
+  await h.session.load('cas'); await h.session.load('torn');
+  const release = h.hold();
+  const days = ['2026-12-01', '2026-12-02', '2026-12-03', '2026-12-04', '2026-12-05'];
+  h.both(days.slice(0, 1));
+  const first = h.session.save();
+  for (let i = 2; i <= 5; i++) { await new Promise(r => setTimeout(r, 1)); h.both(days.slice(0, i)); void h.session.save(); }
+  release();
+  await first; await h.idle();
+  assert.equal(h.files['/dage.txt'], days.join('\n') + '\n');
+  assert.equal(h.files['/torn_dage.txt'], days.join('\n') + '\n');
+  assert.ok(h.uploads.filter(u => u.path === '/dage.txt').length <= 2);
+  assert.ok(h.uploads.filter(u => u.path === '/torn_dage.txt').length <= 2);
+});
+
+test('a failed save does not auto-retry in a loop', async () => {
+  const h = hangingSession();
+  await h.session.load('cas'); await h.session.load('torn');
+  h.session.upload = async () => { throw new Error('Ingen forbindelse'); };
+  h.both(['2026-12-01']);
+  await h.session.save();
+  const after = h.downloads();
+  await new Promise(r => setTimeout(r, 50));
+  assert.equal(h.session.error, 'Ingen forbindelse');
+  assert.equal(h.downloads(), after);
+});
