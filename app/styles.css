@@ -100,3 +100,5 @@ button { background: none; border: 0; padding: 0; cursor: pointer; }
   .tryk:active { transform: none; }
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
+
+.laas { min-height: 100dvh; display: flex; padding: calc(var(--safe-top) + 24px) 0 calc(var(--safe-bottom) + 24px); }
